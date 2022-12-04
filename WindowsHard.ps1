@@ -4,7 +4,7 @@ Import-Module WindowsUpdate
 Import-Module GroupPolicy
 
 # install the list of tools
-function installtools($toolsPath $curUsr) {
+function installtools($toolsPath, $curUsr) {
 	# create a folder in the user directory
 	New-Item -Path "C:\Users\$curUsr" Tools -type Directory
 	
@@ -82,7 +82,7 @@ function winFire(){
 }
 
 # open the ports that are requested
-function openPort($portNum $action $direction) {
+function openPort($portNum, $action, $direction) {
 	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum -Action $action
 }
 
@@ -107,7 +107,7 @@ function main() {
 
 		if (Get-ChildItem -Path "C:\Users\$curUsr\Tools\" -Recurse | Measure-Object == 0) {
 
-		install-tools $toolsPath
+		install-tools ($toolsPath)
 		}
 	}
 
@@ -132,15 +132,16 @@ function main() {
 
 	# remove the tools directory once finished with recon
 	$removeTools = Read-Host -Prompt "Do you want to remvove the tools folder (n)"
-
-	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse
+	if ($removeTools == "y") {
+		Remove-Item -LiteralPath "$toolsPath" -Force -Recurse
+	}
 	
 	# turn on Windows Defender
-	$turnDefender = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
+	$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
 	# Windows 8.1 (server 2016+) should already be on
 	# pulled from(https://support.huntress.io/hc/en-us/articles/4402989131283-Enabling-Microsoft-Defender-using-Powershell-)
 	# need to test
-	if ($turnDefender == "y") {
+	if ($turnDefenderOn == "y") {
 		Set-MpPreference -DisableRealtimeMonitoring $false
 		Set-MpPreference -DisableIOAVProtection $false
 		New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
@@ -153,7 +154,7 @@ function main() {
 	}
 	
 	# maybe perform windows updates?(Rules permitting)
-	$update = Read-Host -Prompt "Do you want to update (y)"
+	$updates = Read-Host -Prompt "Do you want to update (y)"
 	if ($updates == True) {
 		winUP
 	}
