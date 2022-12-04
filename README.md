@@ -5,15 +5,22 @@ WindowsHard.ps1 downloads and runs winpeas along with downloading SysinteralsSui
 
 ## Plans
 
-Plan to do linux hardening and smaller subgroups of linux systems that may not be running the same services 
+Plan to do linux hardening and smaller subgroups of linux systems: if its a router, other forms that have less to configure
+
+Setup scripts to monitor scheduled tasks and other areas of importance 
 
 ## TODO
 
 ### Finish winpeas setup and parsing
 
+### Check if Windows Defender is already running
+- if there is any error print the error and continue execution
+
 ### Add the ability to perform Windows hardening through
  - AD
  - Exchange
- - Windows Defender(Rules)
- - Windows Firewall(Rules)
- - Group Policy?
+ - Group Policy
+
+ ## Ideas
+ - Windows Firewall is currently set to allow any traffic except remote control connection.
+ It might be better to block everything except required services (Inbound and Outbound)
