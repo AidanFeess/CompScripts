@@ -1,13 +1,15 @@
 Import-Module ActiveDirectory
+Import-Module Defender
+Import-Module WindowsUpdate
+Import-Module GroupPolicy
 
-function install-tools($toolsPath) {
-	$winpeasurl = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
+function installtools($toolsPath) {
 	# create a folder in the user directory
 	[string]$curUsr = $env::Username
 	New-Item -Path "C:\Users\$curUsr" Tools -type Directory
 	
-
-	# download winpeas from repo 
+	# From the README
+	$winpeasurl = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
 	Invoke-WebRequest "$winpeasurl" -OutFile "$toolsPath" + "winPEASany_ofs.exe"
 
 	# download the parsers used for the output
@@ -26,27 +28,35 @@ function install-tools($toolsPath) {
 
 }
 
-function tool-start($toolsPath) {
-	[string]$curUsr = $env::Username
-
+function toolstart($curUsr) {
 	# open autoruns and procmon
 	
-	# run winpeas in a terminal
-	# from the README
-	$wp = [System.Reflection.Assembly]::Load([byte[]]([IO.File]::ReadAllBytes("C:\Users\$curUsr\Tools\winPEASany_ofs.exe")));
-	$wp.EntryPoint 
+	# run winpeas in the terminal
+	# from the README(github.com/carlospolop/PEASS-ng/tree/master/winPEAS/winPEASexe)
+	$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
+	$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
 
-	# direct to log to an out File
-	[<ReflectedType_from_before>]::Main("")
+	# execute the parsers to convert to pdf
+	if (!python.exe) {
+		winget install Python3
+	}
+	python3.exe 'C:\Users\$curUsr\Tools\peas2json.py'
+
+	python3.exe 'C:\Users\$curUsr\Tools\json2pdf.py'
 }
 
-function AD-Hard() {
+function ADHard() {
 }
 
-function Exchange-Hard() {
+function ExchangeHard() {
 }
 
 function winUP() {
+}
+
+function winFire(){
+	# block ssh, rdp and msrcp by default
+	Set-NetFirewallRule -
 }
 
 function main() {
@@ -61,21 +71,29 @@ function main() {
 
 		# install the list of tools
 		install-tools $toolsPath
+		}
 	}
-	
+
+	$ExchangePresent = 
+	if (ExchangePresent == True) {
+		# ask to harden Exchange
+		# mostly just secure the server normally
+		$hardenExch = Read-Host -Prompt "Do you want to Harden Exchange (y)"
+		if ($hardenExch == "y") {
+			ExchangeHard
+		}
+	}
 
 	# once tools are run winpeas and parse the output and save it
-	tool-start($toolsPath)
+	toolstart($curUsr)
 
 	# if ActiveDirectory
-	$input = Read-Host -Prompt "Do you want to Harden AD (y)"
-	if (input == "y") {
-		AD-Hard
-	}
-	# if Exchange
-	$input = Read-Host -Prompt "Do you want to Harden Exchange (y)"
-	if (input == "y") {
-		Exchange-Hard
+	$ActiveDirectoryPresent = 
+	if ($ActiveDirectoryPresent == True) {
+		$hardenAD = Read-Host -Prompt "Do you want to Harden AD (y)"
+		if ($hardenAD == "y") {
+			ADHard
+		}
 	}
 	
 	# remove the tools directory once finished with recon

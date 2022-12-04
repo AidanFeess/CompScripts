@@ -16,3 +16,4 @@ Plan to do linux hardening and smaller subgroups of linux systems that may not b
  - Exchange
  - Windows Defender(Rules)
  - Windows Firewall(Rules)
+ - Group Policy?
