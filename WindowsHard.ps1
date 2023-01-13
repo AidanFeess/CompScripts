@@ -67,18 +67,30 @@ function winFire(){
 	# turn defaults on and set logging
 	Set-NetFirewallRule -DefaultInboundAction Allow -DefaultOutboundAction Allow –LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
-	# block all remote access on a system
-	New-NetFirewallRule -DisplayName “Block Inbound Telnet” -Direction Inbound -LocalPort 23 -Action Block
-	New-NetFirewallRule -DisplayName “Block Outbound Telnet” -Direction Outbound -LocalPort 23 -Action Block
+	# # block all remote access on a system
+	# New-NetFirewallRule -DisplayName “Block Inbound Telnet” -Direction Inbound -LocalPort 23 -Action Block
+	# New-NetFirewallRule -DisplayName “Block Outbound Telnet” -Direction Outbound -LocalPort 23 -Action Block
 
-	New-NetFirewallRule -DisplayName “Block Inbound msrpc” -Direction Inbound -LocalPort 135  -Action Block
-	New-NetFirewallRule -DisplayName “Block Outbound msrpc” -Direction Outbound -LocalPort 135  -Action Block
+	# New-NetFirewallRule -DisplayName “Block Inbound msrpc” -Direction Inbound -LocalPort 135  -Action Block
+	# New-NetFirewallRule -DisplayName “Block Outbound msrpc” -Direction Outbound -LocalPort 135  -Action Block
 
-	New-NetFirewallRule -DisplayName “Block Inbound rdp” -Direction Inbound -LocalPort 3389 -Action Block
-	New-NetFirewallRule -DisplayName “Block Outbound rdp” -Direction Outbound -LocalPort 3389 -Action Block
+	# New-NetFirewallRule -DisplayName “Block Inbound rdp” -Direction Inbound -LocalPort 3389 -Action Block
+	# New-NetFirewallRule -DisplayName “Block Outbound rdp” -Direction Outbound -LocalPort 3389 -Action Block
 
-	New-NetFirewallRule -DisplayName “Block Inbound ssh” -Direction Inbound -LocalPort 22 -Action Block
-	New-NetFirewallRule -DisplayName “Block Outbound ssh” -Direction Outbound -LocalPort 22 -Action Block
+	# New-NetFirewallRule -DisplayName “Block Inbound ssh” -Direction Inbound -LocalPort 22 -Action Block
+	# New-NetFirewallRule -DisplayName “Block Outbound ssh” -Direction Outbound -LocalPort 22 -Action Block
+
+	# block all ports not in the list of safe ports
+	# TODO add port for ftp and smtp
+	$safeLs = @(22, 80, 443, 3389)
+	ForEach($port in 5000) {
+		if ($port == $safeLs) {
+			continue;
+		}else {
+			New-NetFirewallRule -DisplayName "Block Inbound Port $port" -Direction Inbound -LocalPort $port -Protocol TCP -Action Block
+			New-NetFirewallRule -DisplayName "Block Outbound Port $port" -Direction Outbound -LocalPort $port -Protocol TCP -Action Block
+		}
+	}
 }
 
 # open the ports that are requested
@@ -97,6 +109,9 @@ function changePass($curUsr) {
 function main() {
 	[string]$curUsr = $env::Username
 	changePass $curUsr
+
+	# disable the old login accounts
+	net user quest /active:no
 
 	# list of tools to install
 	# winpeas, sysinternal suite
