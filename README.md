@@ -22,5 +22,4 @@ Setup scripts to monitor scheduled tasks and other areas of importance
  - Group Policy
 
  ## Ideas
- - Windows Firewall is currently set to allow any traffic except remote control connection.
- It might be better to block everything except required services (Inbound and Outbound)
+ 
