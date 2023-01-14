@@ -52,6 +52,14 @@ function toolstart($curUsr, $toolsPath) {
 function ADHard() {
 }
 
+# edit and configure AD
+function EditAD() {
+}
+
+# edit and configure group policy
+function EditGPO() {
+}
+
 # perform tasks to harden Exchange
 function ExchangeHard() {
 }
@@ -152,22 +160,25 @@ function main() {
 		}
 
 		# turn on Windows Defender
-		$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
-		# Windows 8.1 (server 2016+) should already be on
-		# pulled from(https://support.huntress.io/hc/en-us/articles/4402989131283-Enabling-Microsoft-Defender-using-Powershell-)
-		# need to test
-		if ($turnDefenderOn == "y") {
-			Set-MpPreference -DisableRealtimeMonitoring $false
-			Set-MpPreference -DisableIOAVProtection $false
-			New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
-			New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
-			New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
-			New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
-			New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
-			start-service WinDefend
-			start-service WdNisSvc	
-		}
-
+		# if (!Get-MpComputerStatus) {
+		# 	$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
+		# 	# Windows 8.1 (server 2016+) should already be on
+		# 	# pulled from(https://support.huntress.io/hc/en-us/articles/4402989131283-Enabling-Microsoft-Defender-using-Powershell-)
+		# 	# need to test
+		# 	if ($turnDefenderOn == "y") {
+		# 		Set-MpPreference -DisableRealtimeMonitoring $false
+		# 		Set-MpPreference -DisableIOAVProtection $false
+		# 		New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
+		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
+		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
+		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
+		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
+		# 		start-service WinDefend
+		# 		start-service WdNisSvc	
+		# 	}
+		# }
+		
+		# start all the tools to find any possible weird things running
 		toolstart($curUsr, $toolsPath)
 
 		# remove the tools directory once finished with recon
@@ -191,13 +202,20 @@ function main() {
 		# change the execution policy for powershell for admins only (works for the current machine)
 		# rest of restrictions happen in group policy and active directory
 		Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine
+
+		# disable WinRM
+		Disable-PSRemoting -Force
+
+		# enable applocker
+
 	}else{
 		while(True) {
 			Write-Host "[+] what would you like to do
 			- edit a firewall rule(1)
 			- change a group policy(2)
 			- edit active directory(3)
-			- quit(4)
+			- toolstart(4)
+			- quit(5)
 			"
 			$choice = Read-Host 
 			switch ($choice) {
@@ -226,6 +244,11 @@ function main() {
 
 				condition4 {$choice == "4"}
 				condition4 {
+					toolstart($curUsr, $toolsPath)
+				}
+
+				condition5 {$choice == "5"}
+				condition5 {
 					break
 				}
 

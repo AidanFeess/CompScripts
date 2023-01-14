@@ -76,19 +76,19 @@ $wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBas
 
   - Admins
 
-```cmd
+```
 net localgroup Administrators
 ```
 
   - Remote Desktop Users
 
-```cmd
+```
 net localgroup "Remote Desktop Users"
 ```
 
   - Remote Management Users
 
-```cmd
+```
 net localgroup "Remote Management Users"
 ```
 
@@ -105,3 +105,67 @@ Set-ExecutionPolicy -ExecutionPolicy <Level> -Scope <Scope>
 ```
 
 ### Disable Guest Accounts 
+
+```
+net user guest /active no
+```
+
+### Auditing Running Processes
+
+```
+tasklist
+```
+
+ - Lists all process. Might need to filter on your own
+
+```powershell
+Get-Process
+```
+
+### SMB
+
+ - Audit SMB shares
+
+```
+net view \\127.0.0.1
+```
+
+ - List the open sessions that are active with other machines
+
+```
+net use
+```
+
+ - List open sessions with the current machine
+
+```
+net use
+```
+
+### Scheduled Tasks
+
+ - Shows the currentlt scheduled tasks
+
+```
+schtasks
+```
+
+### Services
+
+ - List running services
+
+```powershell
+Get-Service | Where-Object {$_.Status -eq "running"}
+```
+
+### Autorun
+
+ - Startup apps
+
+```
+wmic startup list full
+```
+
+```
+wmic ntdomain list breif
+```
