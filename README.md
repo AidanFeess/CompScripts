@@ -5,7 +5,8 @@ WindowsHard.ps1 downloads and runs winpeas along with downloading SysinteralsSui
 
 ## Plans
 
-Plan to do linux hardening and smaller subgroups of linux systems: if its a router, other forms that have less to configure
+- linux hardening
+- router
 
 Setup scripts to monitor scheduled tasks and other areas of importance 
 
@@ -21,5 +22,6 @@ Setup scripts to monitor scheduled tasks and other areas of importance
  - Exchange
  - Group Policy
 
- ## Ideas
+## Ideas
+ - block ports 5000+
  
