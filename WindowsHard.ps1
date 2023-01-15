@@ -89,7 +89,7 @@ function winFire($mode){
 	}else{
 
 		# TODO same as line 79
-		$safeLs = @(80, 443, 3389)
+		$safeLs = @(22, 80, 443, 3389)
 	}
 
 	$port = 0
@@ -204,9 +204,12 @@ function main() {
 		Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine
 
 		# disable WinRM
-		Disable-PSRemoting -Force
+		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
+		if ($disableWinRm == "y") {
+			Disable-PSRemoting -Force
+		}
 
-		# enable applocker
+		# enable applocker?
 
 	}else{
 		while(True) {

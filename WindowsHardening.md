@@ -56,21 +56,35 @@ $wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBas
 
 ### Group Policies Tricks
 
- - block users from using powershell
+ - block users from using cmd
+```powershell
+New-GPO -name "<name>" -domain "<domain-name>"
+Set-GPRegistryValue -name "<name>" -key "HKCU\Software\Policies\Microsoft\Windows\System" -ValueName "<name>" -type Dword -value 00000002
+New-GPlink -name "<name>" -Target <target> -LinkEnabled Yes
+```
+ - disable editing of the registry
+```powershell
+#Disable access to registry and editing reg keys 
+New-GPO -name "<name>" -domain "<domain-name>"
+Set-GPRegistryValue -name "<name>" -key "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" -ValueName "<name>" -type Dword -value 00000002
+New-GPLink -name "<name>" -Target $target -LinkEnabled Yes
+```
+
+ - disable starting/stopping services
+```powershell
+New-GPO -name "<name>" -domain "<domain-name>"
+Set-GPRegistryValue -name "<name>" -key "HKLM\Software\Policies\Microsoft\Windows\Task Scheduler5.0" -ValueName "<name>" -type Dword -value 00000004
+New-GPLink -name "<name>" -Target $target -LinkEnabled Yes
+```
+
  - block network shares ie "\\*" in group Policies(figure out how to do this in powershell)
 
+ - disable powershell with GPO
 
 <!-- ### Active Directory -->
 
 <!--  - --> 
 
-<!-- ### Check Scheduled Tasks -->
-
-<!--  - --> 
-
-<!-- ### Group Policiy -->
-
-<!--  - --> 
 
 ### Auditing Important groups
 
@@ -168,4 +182,16 @@ wmic startup list full
 
 ```
 wmic ntdomain list breif
+```
+
+### Networking
+
+ - View Network statistics
+```
+netstat
+```
+
+ - View Ip and such
+```
+ipconfig
 ```
