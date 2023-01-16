@@ -49,23 +49,38 @@ function toolstart($curUsr, $toolsPath) {
 
 # perform Group Policy changes
 # change privlege
-function ADHard() {
+function ADHard {
+	param (
+
+	)
 }
 
 # edit and configure AD
 function EditAD() {
+	param (
+		
+	)
 }
 
 # edit and configure group policy
-function EditGPO() {
+function EditGPO {
+	param (
+	
+	)
 }
 
 # perform tasks to harden Exchange
-function ExchangeHard() {
+function ExchangeHard {
+	param (
+
+	)
 }
 
 # updates windows
-function winUP() {
+function winUP {
+	param (
+		
+	)
 }
 
 # winfire only blocks certain ports at the moment

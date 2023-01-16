@@ -56,21 +56,20 @@ $wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBas
 
 ### Group Policies Tricks
 
- - block users from using cmd
+ - block users from using cmd(might not work)
 ```powershell
 New-GPO -name "<name>" -domain "<domain-name>"
 Set-GPRegistryValue -name "<name>" -key "HKCU\Software\Policies\Microsoft\Windows\System" -ValueName "<name>" -type Dword -value 00000002
 New-GPlink -name "<name>" -Target <target> -LinkEnabled Yes
 ```
- - disable editing of the registry
+ - disable editing of the registry(may not work)
 ```powershell
-#Disable access to registry and editing reg keys 
 New-GPO -name "<name>" -domain "<domain-name>"
 Set-GPRegistryValue -name "<name>" -key "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" -ValueName "<name>" -type Dword -value 00000002
 New-GPLink -name "<name>" -Target $target -LinkEnabled Yes
 ```
 
- - disable starting/stopping services
+ - disable starting/stopping services(may not work)
 ```powershell
 New-GPO -name "<name>" -domain "<domain-name>"
 Set-GPRegistryValue -name "<name>" -key "HKLM\Software\Policies\Microsoft\Windows\Task Scheduler5.0" -ValueName "<name>" -type Dword -value 00000004
@@ -172,6 +171,15 @@ schtasks
 Get-Service | Where-Object {$_.Status -eq "running"}
 ```
 
+ - Stop a running process
+```powershell
+Stop-Service -Name <service-name>
+```
+
+ - Start a stopped process
+```powershell
+ Start-Service -Name <service-name>
+```
 ### Autorun
 
  - Startup apps
