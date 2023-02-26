@@ -291,7 +291,8 @@ function main() {
 		# remove all the non-required admin accounts
 		Write-Host "[+] removing all admin accounts...execpt yours"
 
-		$ user = net localgroup admin | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		# TODO make sure this doesn't kill the main admin
+		$user = net localgroup admin | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) {
 			Write-Output "disabling admin: $x"
 			Remove-LocalGroupMember -Group "Administrators" "$x"
@@ -314,7 +315,9 @@ function main() {
 		# Windows 8.1 (server 2016+) should already be on
 		if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
 			$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
-			# need to test
+			# TODO need to test
+
+			Write-Host "Enabling Windows Defender..."
 			if ($turnDefenderOn -eq "y") {
 				Set-MpPreference -DisableRealtimeMonitoring $false
 				Set-MpPreference -DisableIOAVProtection $false
@@ -326,6 +329,7 @@ function main() {
 				start-service WinDefend
 				start-service WdNisSvc	
 			}
+			Write-Host "Windows Defender Enabled"
 		}
 		
 		# start all the tools to find any possible weird things running
