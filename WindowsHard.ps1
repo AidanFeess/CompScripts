@@ -1,65 +1,75 @@
-Import-Module ActiveDirectory
 Import-Module Defender
+Import-Module NetSecurity
+Import-Module NetTCPIP
 Import-Module WindowsUpdate
 Import-Module GroupPolicy
 
 # install the list of tools
 function installtools($toolsPath, $curUsr) {
+	Write-Host "[+] installing tools..."
+
 	# create a folder in the user directory
-	New-Item -Path "C:\Users\$curUsr" Tools -type Directory
+	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Tools -type Directory
 	
-	# From the README
-	$winpeasurl = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
-	Invoke-WebRequest "$winpeasurl" -OutFile "$toolsPath" + "winPEASany_ofs.exe"
-
 	# download the parsers used for the output
-	$jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
-	Invoke-WebRequest "$jsonUrl" -OutFile "$toolsPath" + "peas2json.py"
+	# $jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
+	# Invoke-WebRequest "$jsonUrl" -OutFile "$toolsPath" + "peas2json.py"
 
-	$pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
-	Invoke-WebRequest "$pdfUrl" -OutFile "$toolsPath" + "json2pdf.py"
+	# $pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
+	# Invoke-WebRequest "$pdfUrl" -OutFile "$toolsPath" + "json2pdf.py"
 
-	# download the sysinternal suite and unzip into Tools
-	$sysUrl = "https://download.sysinternals.com/files/SysinternalsSuite.zip"	
-	$zipPath = "$toolsPath" + "SysinternalsSuite.zip"
-	Invoke-WebRequest "$sysUrl" -OutFile "$zipPath"
-
-	Expand-Archive -LiteralPath '$zipPath' -DestinationPath "$toolsPath" + "SysinternalsSuite"
-
+	# -- Download the specific tools instead of downloading the entire suite --
+	
+	# TCPView
+	$TCPViewUrl = "https://download.sysinternals.com/files/TCPView.zip"	
+	Invoke-WebRequest $TCPViewUrl -OutFile "$toolsPath\TCPView.zip"
+	$zipPath = "$toolsPath\TCPView.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\TCPView"
+	
+	# Procmon
+	$ProcmonUrl = "https://download.sysinternals.com/files/ProcessMonitor.zip"	
+	Invoke-WebRequest "$ProcmonUrl" -OutFile "$toolsPath\ProcessMonitor.zip"
+	$zipPath = "$toolsPath\ProcessMonitor.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Procmon"
+	
+	# Autoruns/Autorunsc
+	$AutorunsUrl = "https://download.sysinternals.com/files/Autoruns.zip"	
+	Invoke-WebRequest "$AutorunsUrl" -OutFile "$toolsPath\Autoruns.zip"
+	$zipPath = "$toolsPath\Autoruns.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Autoruns"
+	
+	Write-Host "[+] finished installing tools"
 }
 
 # once tools are run winpeas and parse the output and save it
 function toolstart($curUsr, $toolsPath) {
-	# open autoruns and procmon
-	Invoke-Expresision "& '"$toolsPath\sysinternals\procmon.exe""
-	
-	# run winpeas in the terminal
-	# from the README(github.com/carlospolop/PEASS-ng/tree/master/winPEAS/winPEASexe)
-	$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
-	$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
+	Write-Host "[+] opening tools..."
 
-	# execute the parsers to convert to pdf
-	if (!python.exe) {
-		winget install Python3
+	# open autoruns, procmon, TCPView
+	Invoke-Expresision "$toolsPath\Procmon\Procmon64.exe"
+	Start-Sleep(500)
+	Invoke-Expresision "$toolsPath\Autoruns\Autoruns64.exe"
+	Start-Sleep(500)
+	Invoke-Expresision "$toolsPath\TCPView\tcpview64.exe"
+	Start-Sleep(500)
+
+	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
+	if ($runWinpeas -eq "y") {
+		# run winpeas in the terminal
+		# from the README(github.com/carlospolop/PEASS-ng/tree/master/winPEAS/winPEASexe)
+		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
+		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
+
+		# # execute the parsers to convert to pdf
+		# if (!python.exe) {
+		#	Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$toolsPath\python3.exe'
+		# }
+		# python3.exe '$toolsPath\peas2json.py'
+
+		# python3.exe '$toolsPath\json2pdf.py'
 	}
-	python3.exe 'C:\Users\$curUsr\Tools\peas2json.py'
 
-	python3.exe 'C:\Users\$curUsr\Tools\json2pdf.py'
-}
-
-# perform Group Policy changes
-# change privlege
-function ADHard {
-	param (
-
-	)
-}
-
-# edit and configure AD
-function EditAD() {
-	param (
-		
-	)
+	Write-Host "[+] all tools opened"
 }
 
 # edit and configure group policy
@@ -84,62 +94,166 @@ function winUP {
 }
 
 # winfire only blocks certain ports at the moment
-function winFire($mode){
-	# turn the firewall on in all profiles
-	Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+function winFire {
+	param (
+		$mode
+	)
+
+	Write-Host "[+] hardening firewall with $mode..."
 
 	# turn defaults on and set logging
-	Set-NetFirewallProfile -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
+	Set-NetFirewallProfile -Profile Dowmain, Public,Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
 	# the only ports allowed at this point are
 	# - rdp
+	# - ssh
 	# - http/https
 	# - need to add any ftp and or smtp
 
 	# block all ports not in the list of safe ports
+	# work needs to be done to make sure that all required services can still run
 	if ($mode == "lan") {
+		# $safeLs = @(21, 53, 80, 443, 587)
 
-		# TODO add previously listed ports here
-		$safeLs = @(80, 443)
+		# supposed to block remote connections outside of the local network, but allow any inside ones
+		New-NetFirewallRule -DisplayName " allow all incoming connections from inside network" -Direction Inbound -RemoteAddress LocalSubnet  -Action Allow
+		New-NetFirewallRule -DisplayName " block all incoming connections from outside network" -Direction Inbound -LocalPort 22, 3389, 5900 -RemoteAddress DefaultGateway -Action Block
 	}else{
+		# $safeLs = @(21, 22, 53, 80, 443, 587, 3389)
 
-		# TODO same as line 79
-		$safeLs = @(22, 80, 443, 3389)
+		# supposed to block remote connections outside of the local network, but allow any inside ones
+		New-NetFirewallRule -DisplayName " allow all incoming connections from inside network" -Direction Inbound -RemoteAddress LocalSubnet  -Action Allow
+		New-NetFirewallRule -DisplayName " block all incoming connections from outside network" -Direction Inbound -LocalPort 22, 5900 -RemoteAddress DefaultGateway -Action Block
 	}
 
-	$port = 0
-	ForEach($port in 5000) {
-		if ($port == $safeLs) {
-			continue;
-		}else {
-			New-NetFirewallRule -DisplayName "Block Inbound Port $port" -Direction Inbound -LocalPort $port -Protocol TCP -Action Block
-			New-NetFirewallRule -DisplayName "Block Outbound Port $port" -Direction Outbound -LocalPort $port -Protocol TCP -Action Block
-		}
-	}
+	# block all the high number ports
+	New-NetFirewallRule -DisplayName "Block the high number ports" -Direction Inbound -LocalPort 5000-10000 -Protocol TCP -Action Block
+	New-NetFirewallRule -DisplayName "Block the high number ports" -Direction Inbound -LocalPort 5000-10000 -Protocol TCP -Action Block
+
+	Write-Host "[+] finished hardening firewall"
 }
 
-# open the ports that are requested
-function editFirewallRule($portNum, $action, $direction) {
-	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum -Action $action
+# open/close the ports that are requested
+function editFirewallRule {
+	param (
+		$portNum, $action, $direction, $protocol
+	)
+
+	Write-Host "[+] editing firewall rule..."
+	
+	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum -Protocol $protocol -Action $action
+	
+	Write-Host "[+] changed firewall rule for $port"
 }
 
 # change the password on admin account
-function changePass($curUsr) {
-	Get-LocalUser
+function changePass {
+	param (
+		$curUsr
+	)
+
+	Write-Host "[+] You are about to change your password"
+
 	$Password = Read-Host "Enter the new password" -AsSecureString
-	$UserAccount = Get-LocalUser -Name "$curUsr"
-	$UserAccount | Set-LocalUser -Password $Password
+	Get-LocalUser -Name "$curUsr" | Set-LocalUser -Password $Password
+	
+	Write-Host "[+] changed password for $curUsr"
+	Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
+}
+
+function  removeTools {
+	param (
+		$toolsPath
+	)
+
+	Write-Host "[+] Removing the tools directory..."
+
+	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse
+
+	Write-Host "[+] Deleted the tools directory"
+}
+
+function discovery {
+	param (
+		
+	)
+
+	Write-Host "[+] running discovery dump..."
+	Write-Host "[+] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED"
+
+	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
+
+	$discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
+	Get-Service -Verbose > "$discoverypath\services.txt"
+	Get-Process -Verbose > "$discoverypath\processes.txt"
+	Get-NetTCPConnection -Verbose > "$discoverypath\processes.txt"
+	schtasks.exe > "$discoverypath\scheduledtasks.txt"
+
+	Write-Host "[+] dump dumped"
+
+}
+
+function setUAC {
+	param (
+		
+	)
+
+	Write-Host "[+] setting UAC values..."
+
+	# set the values
+	$path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+	New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorAdmin' -Value 2 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorUser' -Value 3 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'EnableInstallerDetection' -Value 1 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'EnableVirtualization' -Value 1 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'PromptOnSecureDesktop' -Value 1 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'ValidateAdminCodeSignatures' -Value 0 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'FilterAdministratorToken' -Value 0 -PropertyType DWORD -Force | Out-Null
+
+	Write-Host "[+] values set"
+}
+
+
+function DefenderScan {
+	param (
+		
+	)
+
+	# runs a basic windows defender scan	
+
+	# check to make sure windows defender is able to run
+	if (Get-MpComputerStatus) {
+		Write-Host "[+] setting up for scan..."
+		Set-MpPreference -CheckForSignaturesBeforeRunningScan True -CloudBlockLevel
+
+		Write-Host "[+] removing any exclusions..."
+		# remove all exclusion if there are any
+		$preference = Get-MpPreference
+		foreach ($x in $preference.ExclusionPath) {
+			Remove-MpPreference -ExclusionPath $x
+		}
+
+		Write-Host "[+] running scan in the background..."
+		
+		# TODO receive output from scan
+		Start-MpScan -ScanType FullScan -AsJob
+	}else {
+		Write-Host "[+] error in checking windows defender"
+	}
+	
 }
 
 function main() {
-	# list of tools to install
-	# winpeas, sysinternal suite
-	$toolsPath = "C:\Users\$curUsr\Tools\"
+	# TODO add way to revert all changes so that fixes can be made
+
+	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
 
 	# check if the Tools folder is already created
-	if (Test-Path -Path "C:\Users\$curUsr\Tools" == True) {
+	if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
 
-		if (Get-ChildItem -Path "C:\Users\$curUsr\Tools\" -Recurse | Measure-Object == 0) {
+		Write-Host "[+] checking to see if the tools are installed..."
+		if (Get-ChildItem -Path "C:\Users\$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
 
 			install-tools ($toolsPath)
 		}
@@ -152,32 +266,54 @@ function main() {
 	Write-Output "[+] control will allow the user to make changes to windows without having to navigate around"
 	Start-Sleep -Milliseconds 500
 	$usermode = Read-Host -Prompt "(Harden) or (Control)"
-	if ($usermode == "harden" or "Harden") {
+	if ($usermode -eq "harden" -or "Harden") {
 
-		# disable the old login accounts
-		net user quest /active no
+		# install malwarebytes
+		Write-Host "[+] downloading malwarebytes..."
+		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$toolsPath\mb.exe"
+
+		# Run Malwarebytes
+		Write-Host "[+] click to install the software"
+		Invoke-Expression "$toolsPath\mb.exe"
+
+		Start-Sleep -Milliseconds 1000
+		
+		#Long but disables all guests
+		Write-Host "[+] clearing out guest accounts..."
+
+		$user = net localgroup guests | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		foreach ($x in $user) { 
+			Write-Output "disabling guest: $x"
+			Disable-LocalUser -Name $x
+		}
+		Write-Host "[+] guest accounts cleared"
+
+		# remove all the non-required admin accounts
+		Write-Host "[+] removing all admin accounts...execpt yours"
+
+		$ user = net localgroup admin | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		foreach ($x in $user) {
+			Write-Output "disabling admin: $x"
+			Remove-LocalGroupMember -Group "Administrators" "$x"
+		}
+		Write-Host "[+] pruned Administrator accounts"
+
 		# harden the firewall for remote or lan comps
 		$winFirewallOn = Read-Host -Prompt "Do you want to turn on the windows firewall (y)"
-		if ($winFirewallOn == "y") {
+		if ($winFirewallOn -eq "y" -or "Y") {
 			$mode = Read-Host -Prompt "lan or remote (lan) or (remote)"
 			winFire ($mode)
 		}
 
-		# if ActiveDirectory
-		$hardenAD = Read-Host -Prompt "Do you want to Harden AD (y)"
-		if ($hardenAD == "y") {
-			ADHard
-		}
-
 		$hardenExch = Read-Host -Prompt "Do you want to Harden Exchange (y)"
-		if ($hardenExch == "y") {
+		if ($hardenExch -eq "y" -or "Y") {
 			ExchangeHard
 		}
 
 		# turn on Windows Defender
+		# Windows 8.1 (server 2016+) should already be on
 		# if (!Get-MpComputerStatus) {
 		# 	$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
-		# 	# Windows 8.1 (server 2016+) should already be on
 		# 	# pulled from(https://support.huntress.io/hc/en-us/articles/4402989131283-Enabling-Microsoft-Defender-using-Powershell-)
 		# 	# need to test
 		# 	if ($turnDefenderOn == "y") {
@@ -196,84 +332,93 @@ function main() {
 		# start all the tools to find any possible weird things running
 		toolstart($curUsr, $toolsPath)
 
-		# remove the tools directory once finished with recon
-		$removeTools = Read-Host -Prompt "Do you want to remvove the tools folder (n)"
-		if ($removeTools == "y") {
-			Remove-Item -LiteralPath "$toolsPath" -Force -Recurse
-		}
-		
-		# maybe perform windows updates?(Rules permitting)
-		$updates = Read-Host -Prompt "Do you want to update (y)"
-		if ($updates == True) {
-			winUP
-		}
-
-		# change the password
-		Write-Host "[+] you are about to change your password"
-		[string]$curUsr = $env::Username
-		changePass $curUsr
-		Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
-
 		# change the execution policy for powershell for admins only (works for the current machine)
 		# rest of restrictions happen in group policy and active directory
+		Write-Host "[+] changing powershell policy..."
 		Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine
+		Write-Host "[+] Changed the Powershell policy to Restricted"
 
 		# disable WinRM
 		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
-		if ($disableWinRm == "y") {
+		if ($disableWinRm -eq "y" -or "Y") {
 			Disable-PSRemoting -Force
+			Write-Host "[+] disabled WinRm"
 		}
 
-		# enable applocker?
+		# change the password
+		[string]$curUsr = $env::Username
+		changePass $curUsr
+		
+		# setup UAC
+		setUAC
+
+		# disable anonymous logins
+
+		Write-Host "[+] disabling anonymous users..."
+		Set-CsAccessEdgeConfiguration -AllowAnonymousUsers $False
+		Write-Host "[+] disabled anonymous users"
+
+		# enable/install wdac/applocker/or DeepBlue CLi?
+
+
+		# disable netbios ??????(might be to good)
+		$adapters=(Get-WmiObject win32_networkadapterconfiguration )
+		foreach ($adapter in $adapters){
+			Write-Host $adapter
+			$adapter.settcpipnetbios(0)
+		}
+
+		# update windows potentially
+		$updates = Read-Host -Prompt "Do you want to update (y)"
+		if ($updates -eq "y" -or "Y") {
+			winUP
+		}
 
 	}else{
 		while(True) {
 			Write-Host "[+] what would you like to do
 			- edit a firewall rule(1)
 			- change a group policy(2)
-			- edit active directory(3)
-			- toolstart(4)
-			- quit(5)
+			- Change Password(3)
+			- Install Tools(4)
+			- Start Tools(5)
+			- Remove Tools(6)
+			- Discovery(7)
+			- DefenderScan(8)
+			- quit
 			"
 			$choice = Read-Host 
 			switch ($choice) {
 
-				condition1 {$choice == "1"}
-				condition1 {
+				"1" {
 					$portNum = Read-Host -Prompt "which port (num)"
 					$action = Read-Host -Prompt "(allow) or (block)"
 					$direction = Read-Host -Prompt "which direction (in) or (out)"
 					editFirewallRule ($portNum, $action, $direction)
 				}
 
-				condition2 {$choice == "2"}
-				condition2 {
+				"2" {
 
 					# TODO populate this with stuff after group policy is added
-
 				}
 
-				condition3 {$choice == "3"}
-				condition3 {
+				"3" {changePass($curUsr)}
 
-					# TODO populate this with stuff after group policy is added
+				"4" {installtools($curUsr, $toolsPath)}
 
-				}
+				"5" {toolstart($curUsr, $toolsPath)}
 
-				condition4 {$choice == "4"}
-				condition4 {
-					toolstart($curUsr, $toolsPath)
-				}
+				"6" {removeTools($toolsPath)}
 
-				condition5 {$choice == "5"}
-				condition5 {
-					break
-				}
+				"7" {discovery}
 
-				default {
-					continue
-				}
-			}
+				"8" {DefenderScan}
+
+				"quit" {break}
+
+				default {continue}
+			} 
 		}
 	}
 }
+

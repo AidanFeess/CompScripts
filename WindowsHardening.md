@@ -2,7 +2,7 @@
 ### Firewall
  - Turn Firewall On
 ```powershell
-Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True -DefaultInboundAction Block -DefaultOutboundAction Allow -NotifyOnListen True -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 ```
  - Create New Rule
  ```powershell
@@ -80,9 +80,9 @@ New-GPLink -name "<name>" -Target $target -LinkEnabled Yes
 
  - disable powershell with GPO
 
-<!-- ### Active Directory -->
+### Active Directory
 
-<!--  - --> 
+ - 
 
 
 ### Auditing Important groups
@@ -171,15 +171,26 @@ schtasks
 Get-Service | Where-Object {$_.Status -eq "running"}
 ```
 
- - Stop a running process
+ - Stop a running service
 ```powershell
 Stop-Service -Name <service-name>
 ```
 
- - Start a stopped process
+ - Start a stopped service
 ```powershell
- Start-Service -Name <service-name>
+Start-Service -Name <service-name>
 ```
+
+ - resume a service
+```powershell
+Resume-Service
+```
+
+ - suspend a service
+```powershell
+Suspend-Service -Name <service-name>
+```
+
 ### Autorun
 
  - Startup apps
@@ -194,6 +205,11 @@ wmic ntdomain list breif
 
 ### Networking
 
+ - Get Active TCP connections
+```powershell
+Get-NetTCPConnection
+```
+
  - View Network statistics
 ```
 netstat
@@ -203,3 +219,4 @@ netstat
 ```
 ipconfig
 ```
+
