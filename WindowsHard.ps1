@@ -5,18 +5,19 @@ Import-Module WindowsUpdate
 Import-Module GroupPolicy
 
 # install the list of tools
-function installtools($toolsPath, $curUsr) {
+function installtools($toolsPath) {
 	Write-Host "[+] installing tools..."
 
 	# create a folder in the user directory
-	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Tools -type Directory
+	New-Item -Path "C:\Users\$env::Username\Desktop" -Name Tools -type Directory
 	
 	# download the parsers used for the output
+	
 	# $jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
-	# Invoke-WebRequest "$jsonUrl" -OutFile "$toolsPath" + "peas2json.py"
+	# Invoke-WebRequest $jsonUrl -OutFile "$toolsPath\peas2json.py"
 
 	# $pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
-	# Invoke-WebRequest "$pdfUrl" -OutFile "$toolsPath" + "json2pdf.py"
+	# Invoke-WebRequest $pdfUrl -OutFile "$toolsPath\json2pdf.py"
 
 	# -- Download the specific tools instead of downloading the entire suite --
 	
@@ -42,7 +43,7 @@ function installtools($toolsPath, $curUsr) {
 }
 
 # once tools are run winpeas and parse the output and save it
-function toolstart($curUsr, $toolsPath) {
+function toolstart($toolsPath) {
 	Write-Host "[+] opening tools..."
 
 	# open autoruns, procmon, TCPView
@@ -56,7 +57,6 @@ function toolstart($curUsr, $toolsPath) {
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
 	if ($runWinpeas -eq "y") {
 		# run winpeas in the terminal
-		# from the README(github.com/carlospolop/PEASS-ng/tree/master/winPEAS/winPEASexe)
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
 		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
 
@@ -91,6 +91,12 @@ function winUP {
 	param (
 		
 	)
+
+	# TODO check and see if this actually works/if we want it
+	Write-Host "[+] Setting up Windows Update..."
+	Write-Host "[+] This will work in the background and Reboot when finished"
+	Get-WindowsUpdate -AcceptAll -Install -AutoReboot
+
 }
 
 # winfire only blocks certain ports at the moment
@@ -149,15 +155,15 @@ function editFirewallRule {
 # change the password on admin account
 function changePass {
 	param (
-		$curUsr
+
 	)
 
 	Write-Host "[+] You are about to change your password"
 
 	$Password = Read-Host "Enter the new password" -AsSecureString
-	Get-LocalUser -Name "$curUsr" | Set-LocalUser -Password $Password
+	Get-LocalUser -Name $env::Username | Set-LocalUser -Password $Password
 	
-	Write-Host "[+] changed password for $curUsr"
+	Write-Host "[+] changed password for $env::Username"
 	Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
 }
 
@@ -181,9 +187,9 @@ function discovery {
 	Write-Host "[+] running discovery dump..."
 	Write-Host "[+] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED"
 
-	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
+	New-Item -Path "C:\Users\$env::Username\Desktop" -Name Discovery -type Directory
 
-	$discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
+	$discoverypath = "C:\Users\$env::Username\Desktop\Discovery"
 	Get-Service -Verbose > "$discoverypath\services.txt"
 	Get-Process -Verbose > "$discoverypath\processes.txt"
 	Get-NetTCPConnection -Verbose > "$discoverypath\processes.txt"
@@ -237,7 +243,7 @@ function DefenderScan {
 		Write-Host "[+] running scan in the background..."
 		
 		# TODO receive output from scan
-		Start-MpScan -ScanType FullScan -AsJob
+		Start-MpScan -ScanType FullScan -AsJob -Verbose
 	}else {
 		Write-Host "[+] error in checking windows defender"
 	}
@@ -247,15 +253,15 @@ function DefenderScan {
 function main() {
 	# TODO add way to revert all changes so that fixes can be made
 
-	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
+	$toolsPath = "C:\Users\$env::Username\Desktop\Tools"
 
 	# check if the Tools folder is already created
-	if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
+	if (Test-Path -Path "C:\Users\$env::Username\Desktop\Tools" -eq True) {
 
 		Write-Host "[+] checking to see if the tools are installed..."
-		if (Get-ChildItem -Path "C:\Users\$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
+		if (Get-ChildItem -Path "C:\Users\$env::Username\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
 
-			install-tools ($toolsPath)
+			installtools ($toolsPath)
 		}
 	}
 
@@ -333,7 +339,7 @@ function main() {
 		}
 		
 		# start all the tools to find any possible weird things running
-		toolstart($curUsr, $toolsPath)
+		toolstart($toolsPath)
 
 		# change the execution policy for powershell for admins only (works for the current machine)
 		# rest of restrictions happen in group policy and active directory
@@ -349,8 +355,7 @@ function main() {
 		}
 
 		# change the password
-		[string]$curUsr = $env::Username
-		changePass $curUsr
+		changePass 
 		
 		# setup UAC
 		setUAC
@@ -405,11 +410,11 @@ function main() {
 					# TODO populate this with stuff after group policy is added
 				}
 
-				"3" {changePass($curUsr)}
+				"3" {changePass}
 
-				"4" {installtools($curUsr, $toolsPath)}
+				"4" {installtools($toolsPath)}
 
-				"5" {toolstart($curUsr, $toolsPath)}
+				"5" {toolstart($toolsPath)}
 
 				"6" {removeTools($toolsPath)}
 
