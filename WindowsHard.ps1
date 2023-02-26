@@ -312,22 +312,21 @@ function main() {
 
 		# turn on Windows Defender
 		# Windows 8.1 (server 2016+) should already be on
-		# if (!Get-MpComputerStatus) {
-		# 	$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
-		# 	# pulled from(https://support.huntress.io/hc/en-us/articles/4402989131283-Enabling-Microsoft-Defender-using-Powershell-)
-		# 	# need to test
-		# 	if ($turnDefenderOn == "y") {
-		# 		Set-MpPreference -DisableRealtimeMonitoring $false
-		# 		Set-MpPreference -DisableIOAVProtection $false
-		# 		New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
-		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
-		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
-		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
-		# 		New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
-		# 		start-service WinDefend
-		# 		start-service WdNisSvc	
-		# 	}
-		# }
+		if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
+			$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
+			# need to test
+			if ($turnDefenderOn -eq "y") {
+				Set-MpPreference -DisableRealtimeMonitoring $false
+				Set-MpPreference -DisableIOAVProtection $false
+				New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
+				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
+				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
+				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
+				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
+				start-service WinDefend
+				start-service WdNisSvc	
+			}
+		}
 		
 		# start all the tools to find any possible weird things running
 		toolstart($curUsr, $toolsPath)
