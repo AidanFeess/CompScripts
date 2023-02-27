@@ -1,8 +1,8 @@
 Import-Module Defender
 Import-Module NetSecurity
 Import-Module NetTCPIP
-Import-Module WindowsUpdate
 Import-Module GroupPolicy
+Import-Module Microsoft.PowerShell.LocalAccounts
 
 # install the list of tools
 function installtools($toolsPath) {
@@ -94,7 +94,13 @@ function winUP {
 
 	# TODO check and see if this actually works/if we want it
 	Write-Host "[+] Setting up Windows Update..."
+	
+	# we will have to install this / need to make sure we can
+	Install-Module -Name PSWindowsUpdate
+	Import-Module PSWindowsUpdate
+
 	Write-Host "[+] This will work in the background and Reboot when finished"
+	
 	Get-WindowsUpdate -AcceptAll -Install -AutoReboot
 
 }
@@ -153,15 +159,20 @@ function editFirewallRule {
 }
 
 # change the password on admin account
-function changePass {
+function changeCreds {
 	param (
 
 	)
 
-	Write-Host "[+] You are about to change your password"
+	Write-Host "[+] You are about to change the username of the current admin"
+	$newUsername = Read-Host -Prompt "What is the new name?"
+	Rename-LocalUser -Name "$env::Username" -NewName "$newUsername"
+	Write-Host "[+] New username set"
+
+	Write-Host "[+] You are now about to change your password"
 
 	$Password = Read-Host "Enter the new password" -AsSecureString
-	Get-LocalUser -Name $env::Username | Set-LocalUser -Password $Password
+	Get-LocalUser -Name "$env::Username" | Set-LocalUser -Password $Password
 	
 	Write-Host "[+] changed password for $env::Username"
 	Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
@@ -287,7 +298,7 @@ function main() {
 		#Long but disables all guests
 		Write-Host "[+] clearing out guest accounts..."
 
-		$user = net localgroup guests | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		$user = Get-LocalGroup -Name "guests" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) { 
 			Write-Output "disabling guest: $x"
 			Disable-LocalUser -Name $x
@@ -297,11 +308,13 @@ function main() {
 		# remove all the non-required admin accounts
 		Write-Host "[+] removing all admin accounts...execpt yours"
 
-		# TODO make sure this doesn't kill the main admin
-		$user = net localgroup admin | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		# TODO check to make sure this works
+		$user = Get-LocalGroup -Name "Administrators" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) {
-			Write-Output "disabling admin: $x"
-			Remove-LocalGroupMember -Group "Administrators" "$x"
+			if ($env::Username -notmatch $user) {
+				Write-Output "disabling admin: $x"
+				Remove-LocalGroupMember -Group "Administrators" "$x"
+			}
 		}
 		Write-Host "[+] pruned Administrator accounts"
 
@@ -354,14 +367,13 @@ function main() {
 			Write-Host "[+] disabled WinRm"
 		}
 
-		# change the password
-		changePass 
+		# change the password/username of the current admin
+		changeCreds 
 		
 		# setup UAC
 		setUAC
 
 		# disable anonymous logins
-
 		Write-Host "[+] disabling anonymous users..."
 		Set-CsAccessEdgeConfiguration -AllowAnonymousUsers $False
 		Write-Host "[+] disabled anonymous users"
@@ -383,7 +395,7 @@ function main() {
 		}
 
 	}else{
-		while(True) {
+		while($true) {
 			Write-Host "[+] what would you like to do
 			- edit a firewall rule(1)
 			- change a group policy(2)
@@ -410,7 +422,7 @@ function main() {
 					# TODO populate this with stuff after group policy is added
 				}
 
-				"3" {changePass}
+				"3" {changeCreds}
 
 				"4" {installtools($toolsPath)}
 
