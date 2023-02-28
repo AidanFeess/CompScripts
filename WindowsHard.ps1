@@ -5,11 +5,16 @@ Import-Module GroupPolicy
 Import-Module Microsoft.PowerShell.LocalAccounts
 
 # install the list of tools
-function installtools($toolsPath) {
+function installtools {
+	param (
+		$toolsPath,
+		$curUsr
+	)
+
 	Write-Host "[+] installing tools..."
 
 	# create a folder in the user directory
-	New-Item -Path "C:\Users\$env::Username\Desktop" -Name Tools -type Directory
+	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Tools -type Directory
 	
 	# download the parsers used for the output
 	
@@ -43,7 +48,11 @@ function installtools($toolsPath) {
 }
 
 # once tools are run winpeas and parse the output and save it
-function toolstart($toolsPath) {
+function toolstart {
+	param (
+		$toolsPath
+	)
+
 	Write-Host "[+] opening tools..."
 
 	# open autoruns, procmon, TCPView
@@ -161,20 +170,20 @@ function editFirewallRule {
 # change the password on admin account
 function changeCreds {
 	param (
-
+		$curUsr
 	)
 
 	Write-Host "[+] You are about to change the username of the current admin"
 	$newUsername = Read-Host -Prompt "What is the new name?"
-	Rename-LocalUser -Name "$env::Username" -NewName "$newUsername"
+	Rename-LocalUser -Name "$curUsr" -NewName "$newUsername"
 	Write-Host "[+] New username set"
 
 	Write-Host "[+] You are now about to change your password"
 
 	$Password = Read-Host "Enter the new password" -AsSecureString
-	Get-LocalUser -Name "$env::Username" | Set-LocalUser -Password $Password
+	Get-LocalUser -Name "$curUsr" | Set-LocalUser -Password $Password
 	
-	Write-Host "[+] changed password for $env::Username"
+	Write-Host "[+] changed password for $curUsr"
 	Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
 }
 
@@ -192,15 +201,15 @@ function  removeTools {
 
 function discovery {
 	param (
-		
+		$curUsr	
 	)
 
 	Write-Host "[+] running discovery dump..."
 	Write-Host "[+] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED"
 
-	New-Item -Path "C:\Users\$env::Username\Desktop" -Name Discovery -type Directory
+	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
 
-	$discoverypath = "C:\Users\$env::Username\Desktop\Discovery"
+	$discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
 	Get-Service -Verbose > "$discoverypath\services.txt"
 	Get-Process -Verbose > "$discoverypath\processes.txt"
 	Get-NetTCPConnection -Verbose > "$discoverypath\processes.txt"
@@ -264,13 +273,14 @@ function DefenderScan {
 function main() {
 	# TODO add way to revert all changes so that fixes can be made
 
-	$toolsPath = "C:\Users\$env::Username\Desktop\Tools"
+	$curUsr = [Environment]::UserName
+	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
 
 	# check if the Tools folder is already created
-	if (Test-Path -Path "C:\Users\$env::Username\Desktop\Tools" -eq True) {
+	if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
 
 		Write-Host "[+] checking to see if the tools are installed..."
-		if (Get-ChildItem -Path "C:\Users\$env::Username\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
+		if (Get-ChildItem -Path "C:\Users\$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
 
 			installtools ($toolsPath)
 		}
@@ -311,7 +321,7 @@ function main() {
 		# TODO check to make sure this works
 		$user = Get-LocalGroup -Name "Administrators" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) {
-			if ($env::Username -notmatch $user) {
+			if ($curUsr -notmatch $user) {
 				Write-Output "disabling admin: $x"
 				Remove-LocalGroupMember -Group "Administrators" "$x"
 			}
@@ -368,7 +378,7 @@ function main() {
 		}
 
 		# change the password/username of the current admin
-		changeCreds 
+		changeCreds($curUsr)
 		
 		# setup UAC
 		setUAC
@@ -422,15 +432,15 @@ function main() {
 					# TODO populate this with stuff after group policy is added
 				}
 
-				"3" {changeCreds}
+				"3" {changeCreds($curUsr)}
 
-				"4" {installtools($toolsPath)}
+				"4" {installtools($toolsPath, $curUsr)}
 
 				"5" {toolstart($toolsPath)}
 
 				"6" {removeTools($toolsPath)}
 
-				"7" {discovery}
+				"7" {discovery($curUsr)}
 
 				"8" {DefenderScan}
 

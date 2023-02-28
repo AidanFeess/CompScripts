@@ -21,7 +21,7 @@ Logout is needed to complete the change
 ```powershell
 Get-LocalUser
 $Password = Read-Host "Enter the new password" -AsSecureString
-$UserAccount = Get-LocalUser -Name $env::Username
+$UserAccount = Get-LocalUser -Name [Environment]::UserName
 $UserAccount | Set-LocalUser -Password $Password
 ```
 
