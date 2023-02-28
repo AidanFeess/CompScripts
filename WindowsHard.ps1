@@ -124,7 +124,7 @@ function winUP {
 # winfire only blocks certain ports at the moment
 function winFire {
 	param (
-		$mode
+
 	)
 
 	Write-Host "[+] hardening firewall with $mode..."
@@ -132,34 +132,50 @@ function winFire {
 	# turn defaults on and set logging
 	Set-NetFirewallProfile -Profile Dowmain, Public,Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
-	# the only ports allowed at this point are
-	# - rdp
-	# - ssh
-	# - http/https
-	# - need to add any ftp and or smtp
+	# get the current listening conections ports
+	$a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort
 
-	# block all ports not in the list of safe ports
-	# work needs to be done to make sure that all required services can still run
-	if ($mode == "lan") {
+	Write-Host "[+] You are possibly going to be asked if you want to block certain ports"
+	Write-Host "[+] your options are ( y ) or ( n )"
 
-		$safeLs = @(21, 53, 80, 443, 587)
+	# parse the list to remove ports that shouldn't 
+	foreach ($x in $a) {
+		
+		if ($x -eq 22) {
 
-		# TODO supposed to block remote connections outside of the local network, but allow any inside ones
-		New-NetFirewallRule -DisplayName "allow all incoming connections" -Direction Inbound -LocalPort $safeLs -RemoteAddress Any -Action Allow
-		New-NetFirewallRule -DisplayName "block all incoming connections used with safeLs" -Direction Inbound -LocalPort Any -Action Block
+			$response = Read-Host -Prompt "Do you want to block ssh?"
 
-	}else{
+			if ($response -eq "y" -or "Y") {
+				$a[$x].Remove	
+			}else{
+				Write-Host "[+] ssh(22) will remain open"
+			}
+		}
 
-		$safeLs = @(21, 22, 53, 80, 443, 587, 3389)
+		if ($x -eq 5900) {
+			$response = Read-Host -Prompt "Do you want to block vnc?"
 
-		# TODO supposed to block remote connections outside of the local network, but allow any inside ones
-		New-NetFirewallRule -DisplayName " allow all incoming connections from inside network" -Direction Inbound -LocalPort $safeLs -RemoteAddress Any  -Action Allow
-		New-NetFirewallRule -DisplayName " block all incoming connections from outside network" -Direction Inbound -LocalPort 22, 5900 -Action Block
+			if ($response -eq "y" -or "Y") {
+				$a[$x].Remove
+			}else{
+				Write-Host "[+] vnc(5900) will remain open"
+			}
+		}
+
+		if ($x -eq 3389) {
+			$response = Read-Host -Prompt "Do you want to block rdp?"
+
+			if ($response -eq "y" -or "Y") {
+				$a[$x].Remove
+			}
+		}
+
+
 	}
 
-	# block all the high number ports
-	New-NetFirewallRule -DisplayName "Block the high number ports" -Direction Inbound -LocalPort 5000-10000 -Protocol TCP -Action Block
-	New-NetFirewallRule -DisplayName "Block the high number ports" -Direction Inbound -LocalPort 5000-10000 -Protocol TCP -Action Block
+	# TODO supposed to allow already existing connections and remove ports that aren't being used
+	New-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Direction Inbound -LocalPort $a.LocalPort -Action Allow
+	New-NetFirewallRule -DisplayName "block all ports not in current use" -Direction Inbound -LocalPort Any -Action Block
 
 	Write-Host "[+] finished hardening firewall"
 }
@@ -344,7 +360,7 @@ function main() {
 		$winFirewallOn = Read-Host -Prompt "Do you want to turn on the windows firewall (y)"
 		if ($winFirewallOn -eq "y" -or "Y") {
 			$mode = Read-Host -Prompt "lan or remote (lan) or (remote)"
-			winFire ($mode)
+			winFire
 		}
 
 		$hardenExch = Read-Host -Prompt "Do you want to Harden Exchange (y)"
