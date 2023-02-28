@@ -3,6 +3,8 @@ Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
 Import-Module Microsoft.PowerShell.LocalAccounts
+Import-Module Microsoft.PowerShell.Utility
+Import-Module ScheduledTasks
 
 # install the list of tools
 function installtools {
@@ -139,17 +141,20 @@ function winFire {
 	# block all ports not in the list of safe ports
 	# work needs to be done to make sure that all required services can still run
 	if ($mode == "lan") {
+
 		$safeLs = @(21, 53, 80, 443, 587)
 
-		# supposed to block remote connections outside of the local network, but allow any inside ones
+		# TODO supposed to block remote connections outside of the local network, but allow any inside ones
 		New-NetFirewallRule -DisplayName "allow all incoming connections" -Direction Inbound -LocalPort $safeLs -RemoteAddress Any -Action Allow
 		New-NetFirewallRule -DisplayName "block all incoming connections used with safeLs" -Direction Inbound -LocalPort Any -Action Block
+
 	}else{
+
 		$safeLs = @(21, 22, 53, 80, 443, 587, 3389)
 
-		# supposed to block remote connections outside of the local network, but allow any inside ones
-		New-NetFirewallRule -DisplayName " allow all incoming connections from inside network" -Direction Inbound -RemoteAddress LocalSubnet  -Action Allow
-		New-NetFirewallRule -DisplayName " block all incoming connections from outside network" -Direction Inbound -LocalPort 22, 5900 -RemoteAddress DefaultGateway -Action Block
+		# TODO supposed to block remote connections outside of the local network, but allow any inside ones
+		New-NetFirewallRule -DisplayName " allow all incoming connections from inside network" -Direction Inbound -LocalPort $safeLs -RemoteAddress Any  -Action Allow
+		New-NetFirewallRule -DisplayName " block all incoming connections from outside network" -Direction Inbound -LocalPort 22, 5900 -Action Block
 	}
 
 	# block all the high number ports
@@ -214,11 +219,13 @@ function discovery {
 
 	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
 
+	# prints the results into a nicely formatted table for saving  
 	$discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
-	Get-Service -Verbose > "$discoverypath\services.txt"
-	Get-Process -Verbose > "$discoverypath\processes.txt"
-	Get-NetTCPConnection -Verbose > "$discoverypath\processes.txt"
-	schtasks.exe > "$discoverypath\scheduledtasks.txt"
+	Get-Service -Verbose | Format-Table -AutoSize > "$discoverypath\services.txt"
+	Get-Process -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+	Get-NetTCPConnection -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+	Get-ScheduledTask -Verbose | Format-Table -AutoSize > "$discoverypath\scheduledtasks.txt"
+	wmic startup list full | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
 
 	Write-Host "[+] dump dumped"
 
@@ -364,6 +371,7 @@ function main() {
 				start-service WdNisSvc	
 			}
 			Write-Host "Windows Defender Enabled"
+
 		}
 		
 		# start all the tools to find any possible weird things running
@@ -393,7 +401,7 @@ function main() {
 		Set-CsAccessEdgeConfiguration -AllowAnonymousUsers $False
 		Write-Host "[+] disabled anonymous users"
 
-		# enable/install wdac/applocker/or DeepBlue CLi?
+		# TODO enable/install wdac/applocker/or DeepBlue CLi?
 
 
 		# disable netbios ??????(might be to good)
