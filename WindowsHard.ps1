@@ -16,14 +16,6 @@ function installtools {
 	# create a folder in the user directory
 	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Tools -type Directory
 	
-	# download the parsers used for the output
-	
-	# $jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
-	# Invoke-WebRequest $jsonUrl -OutFile "$toolsPath\peas2json.py"
-
-	# $pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
-	# Invoke-WebRequest $pdfUrl -OutFile "$toolsPath\json2pdf.py"
-
 	# -- Download the specific tools instead of downloading the entire suite --
 	
 	# TCPView
@@ -69,13 +61,26 @@ function toolstart {
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
 		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
 
-		# # execute the parsers to convert to pdf
-		# if (!python.exe) {
-		#	Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$toolsPath\python3.exe'
-		# }
-		# python3.exe '$toolsPath\peas2json.py'
+		# execute the parsers to convert to pdf
+		$installPython = Read-Host -Prompt "Would you like to install Python?"
+		if ($installPython -eq "y") {
+			Write-Host "[+] WARNING this can leave your system vulnerable" 
+			Write-Host "[+] Consider removing these items after use if they aren't going to be controlled" 
 
-		# python3.exe '$toolsPath\json2pdf.py'
+			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$toolsPath\python3.exe'
+
+			# download the parsers used for the output
+		
+			$jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
+			Invoke-WebRequest $jsonUrl -OutFile "$toolsPath\peas2json.py"
+
+			$pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
+			Invoke-WebRequest $pdfUrl -OutFile "$toolsPath\json2pdf.py"
+
+		}
+		python3.exe '$toolsPath\peas2json.py'
+
+		python3.exe '$toolsPath\json2pdf.py'
 	}
 
 	Write-Host "[+] all tools opened"
@@ -134,13 +139,13 @@ function winFire {
 	# block all ports not in the list of safe ports
 	# work needs to be done to make sure that all required services can still run
 	if ($mode == "lan") {
-		# $safeLs = @(21, 53, 80, 443, 587)
+		$safeLs = @(21, 53, 80, 443, 587)
 
 		# supposed to block remote connections outside of the local network, but allow any inside ones
-		New-NetFirewallRule -DisplayName " allow all incoming connections from inside network" -Direction Inbound -RemoteAddress LocalSubnet  -Action Allow
-		New-NetFirewallRule -DisplayName " block all incoming connections from outside network" -Direction Inbound -LocalPort 22, 3389, 5900 -RemoteAddress DefaultGateway -Action Block
+		New-NetFirewallRule -DisplayName "allow all incoming connections" -Direction Inbound -LocalPort $safeLs -RemoteAddress Any -Action Allow
+		New-NetFirewallRule -DisplayName "block all incoming connections used with safeLs" -Direction Inbound -LocalPort Any -Action Block
 	}else{
-		# $safeLs = @(21, 22, 53, 80, 443, 587, 3389)
+		$safeLs = @(21, 22, 53, 80, 443, 587, 3389)
 
 		# supposed to block remote connections outside of the local network, but allow any inside ones
 		New-NetFirewallRule -DisplayName " allow all incoming connections from inside network" -Direction Inbound -RemoteAddress LocalSubnet  -Action Allow
