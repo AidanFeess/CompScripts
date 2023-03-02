@@ -22,21 +22,60 @@ function installtools {
 	
 	# TCPView
 	$TCPViewUrl = "https://download.sysinternals.com/files/TCPView.zip"	
-	Invoke-WebRequest $TCPViewUrl -OutFile "$toolsPath\TCPView.zip"
-	$zipPath = "$toolsPath\TCPView.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\TCPView"
+	Invoke-WebRequest $TCPViewUrl -OutFile "$toolsPath\TCPView.zip" -ErrorAction Continue -ErrorVariable $DownTCP
+
+    if ($DownTCP) {
+        
+        Write-Output "[-] Error in downloading TCPView, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+    }
+	
+    $zipPath = "$toolsPath\TCPView.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\TCPView" -ErrorAction Continue -ErrorVariable $UNZTCP
+
+    if ($UNZTCP) {
+        
+        Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+    }
 	
 	# Procmon
 	$ProcmonUrl = "https://download.sysinternals.com/files/ProcessMonitor.zip"	
-	Invoke-WebRequest "$ProcmonUrl" -OutFile "$toolsPath\ProcessMonitor.zip"
-	$zipPath = "$toolsPath\ProcessMonitor.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Procmon"
+	Invoke-WebRequest "$ProcmonUrl" -OutFile "$toolsPath\ProcessMonitor.zip" -ErrorAction Continue -ErrorVariable $DownProcmon
+
+    if ($DownProcmon) {
+        
+        Write-Output "[-] Error in downloading Procmon, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+    }
+	
+    $zipPath = "$toolsPath\ProcessMonitor.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Procmon" -ErrorAction Continue -ErrorVariable $UNZPROC
+
+    if ($UNZPROC) {
+        
+        Write-Output "[-] Error in unziping Procmon, make sure it was downloaded" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+    }
 	
 	# Autoruns/Autorunsc
 	$AutorunsUrl = "https://download.sysinternals.com/files/Autoruns.zip"	
-	Invoke-WebRequest "$AutorunsUrl" -OutFile "$toolsPath\Autoruns.zip"
-	$zipPath = "$toolsPath\Autoruns.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Autoruns"
+	Invoke-WebRequest "$AutorunsUrl" -OutFile "$toolsPath\Autoruns.zip" -ErrorAction Continue -ErrorVariable $DownAutoruns
+
+    if ($DownAutoruns) {
+        
+        Write-Output "[-] Error in downloading Autoruns, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+    }
+	
+    $zipPath = "$toolsPath\Autoruns.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Autoruns" -ErrorAction Continue -ErrorVariable $UNZAuto
+
+    if ($UNZAuto) {
+        
+        Write-Output "[-] Error in unziping Autoruns, make sure it was downloaded" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+    }
 	
 	Write-Host "[+] finished installing tools"
 }
@@ -50,57 +89,100 @@ function toolstart {
 	Write-Host "[+] opening tools..."
 
 	# open autoruns, procmon, TCPView
-	Invoke-Expresision "$toolsPath\Procmon\Procmon64.exe"
+	Invoke-Expresision -Command "$toolsPath\Procmon\Procmon64.exe"
 	Start-Sleep(500)
-	Invoke-Expresision "$toolsPath\Autoruns\Autoruns64.exe"
+	
+    Invoke-Expresision -Command "$toolsPath\Autoruns\Autoruns64.exe"
 	Start-Sleep(500)
-	Invoke-Expresision "$toolsPath\TCPView\tcpview64.exe"
+	
+    Invoke-Expresision -Comand "$toolsPath\TCPView\tcpview64.exe"
 	Start-Sleep(500)
 
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
-	if ($runWinpeas -eq "y") {
-		# run winpeas in the terminal
+	if ($runWinpeas -eq ("y" -or "Y")) {
+		
+        # run winpeas in the terminal
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
 		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
 
 		# execute the parsers to convert to pdf
 		$installPython = Read-Host -Prompt "Would you like to install Python?"
-		if ($installPython -eq "y") {
-			Write-Host "[+] WARNING this can leave your system vulnerable" 
+		if ($installPython -eq ("y" -or "Y")) {
+		
+        	Write-Host "[+] WARNING this can leave your system vulnerable" 
 			Write-Host "[+] Consider removing these items after use if they aren't going to be controlled" 
 
-			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$toolsPath\python3.exe'
+			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$toolsPath\python3.exe' -ErrorAction Continue -ErrorVariable $DownPYTHON
 
-			# download the parsers used for the output
+            if ($DownPYTHON) {
+                
+                Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+            }
+
+            # still need to manually install
+            Write-Host "[+] install python and make sure to add to your path"
+
+            Invoke-Expression -Command "$toolSPath\python3.exe" 
+
+            # should refresh the path so that the parsers can be used in the same session
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+            # -- download the parsers used for the output --
 		
 			$jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
-			Invoke-WebRequest $jsonUrl -OutFile "$toolsPath\peas2json.py"
+			Invoke-WebRequest $jsonUrl -OutFile "$toolsPath\peas2json.py" -ErrorAction Continue -ErrorVariable $DownJSONPARSE
 
+            if ($DownJSONPARSE) {
+        
+                Write-Output "[-] Error in downloading json peas parser, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+            }
+            
 			$pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
-			Invoke-WebRequest $pdfUrl -OutFile "$toolsPath\json2pdf.py"
+			Invoke-WebRequest $pdfUrl -OutFile "$toolsPath\json2pdf.py" -ErrorAction Continue -ErrorVariable $DownPDFPARSE
+
+            if ($DownPDFPARSE) {
+        
+                Write-Output "[-] Error in downloading pdf peas parser, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+            }
 
 		}
-		python3.exe '$toolsPath\peas2json.py'
+		
+        # run the parsers so that it can be viewed easily
+        python3.exe '$toolsPath\peas2json.py $toolsPath\log.out $toolsPath\peas.json'
 
-		python3.exe '$toolsPath\json2pdf.py'
+		python3.exe '$toolsPath\json2pdf.py $toolsPath\peas.json $toolsPath\peas.pdf'
+    
+        # open the pdf for viewing
+        Start-Process ((Resolve-Path "C:\..\peas.pdf").Path)
+        
 	}
 
 	Write-Host "[+] all tools opened"
 }
 
+
 # edit and configure group policy
 function EditGPO {
 	param (
-	
+
 	)
 }
+
 
 # perform tasks to harden Exchange
 function ExchangeHard {
 	param (
-
+        $isExchange
 	)
+    
+    Import-Module ExchangePowerShell
+
+    
 }
+
 
 # updates windows
 function winUP {
@@ -112,14 +194,25 @@ function winUP {
 	Write-Host "[+] Setting up Windows Update..."
 	
 	# we will have to install this / need to make sure we can
-	Install-Module -Name PSWindowsUpdate
-	Import-Module PSWindowsUpdate
+	Install-Module -Name PSWindowsUpdate -ErrorAction Continue -ErrorVariable $INSPSudpate
 
-	Write-Host "[+] This will work in the background and Reboot when finished"
+    if ($INSPSudpate) {
+        
+        Write-Output "[-] Error in installing PSUpdate" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+    }else{
+
+	    Import-Module PSWindowsUpdate
+        
+        Write-Host "[+] This will work in the background and Reboot when finished"
 	
-	Get-WindowsUpdate -AcceptAll -Install -AutoReboot
+	    Get-WindowsUpdate -AcceptAll -Install -AutoReboot
+    }
+
+	
 
 }
+
 
 # winfire only blocks certain ports at the moment
 function winFire {
@@ -133,7 +226,13 @@ function winFire {
 	Set-NetFirewallProfile -Profile Dowmain, Public,Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
 	# get the current listening conections ports
-	$a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort
+	$a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen -ErrorAction Continue
+
+    if ($GetListen) {
+
+        Write-Output "[-] Error in geting the active list of listening ports" | Out-File -FilePath "toolsPath\ErrOut.txt"
+                 
+    }
 
 	Write-Host "[+] You are possibly going to be asked if you want to block certain ports"
 	Write-Host "[+] your options are ( y ) or ( n )"
@@ -145,29 +244,49 @@ function winFire {
 
 			$response = Read-Host -Prompt "Do you want to block ssh?"
 
-			if ($response -eq "y" -or "Y") {
-				$a[$x].Remove	
+			if ($response -eq ("y" -or "Y")) {
+			
+               	$a[$x].Remove	
+				Write-Host "[+] ssh(22) blocked"
+
 			}else{
+
 				Write-Host "[+] ssh(22) will remain open"
+
 			}
 		}
 
 		if ($x -eq 5900) {
-			$response = Read-Host -Prompt "Do you want to block vnc?"
+	
+    		$response = Read-Host -Prompt "Do you want to block vnc?"
 
 			if ($response -eq "y" -or "Y") {
-				$a[$x].Remove
+	
+    			$a[$x].Remove
+    			Write-Host "[+] vnc(5900) blocked"
+
 			}else{
-				Write-Host "[+] vnc(5900) will remain open"
-			}
+	
+    			Write-Host "[+] vnc(5900) will remain open"
+	
+    		}
 		}
 
 		if ($x -eq 3389) {
-			$response = Read-Host -Prompt "Do you want to block rdp?"
+	
+    		$response = Read-Host -Prompt "Do you want to block rdp?"
 
 			if ($response -eq "y" -or "Y") {
-				$a[$x].Remove
-			}
+	
+    			$a[$x].Remove
+	
+    			Write-Host "[+] rdp(389) blocked"
+	
+    		}else{
+	
+    			Write-Host "[+] rdp(389) will remain open"
+	
+    		}
 		}
 
 
@@ -178,18 +297,26 @@ function winFire {
 	New-NetFirewallRule -DisplayName "block all ports not in current use" -Direction Inbound -LocalPort Any -Action Block
 
 	Write-Host "[+] finished hardening firewall"
+    Write-Host "[+] remember to do a deeper dive later and patch any holes"
 }
+
 
 # open/close the ports that are requested
 function editFirewallRule {
 	param (
-		$portNum, $action, $direction, $protocol
+		$portNum, $action, $direction, $protocol, $toolsPath
 	)
 
 	Write-Host "[+] editing firewall rule..."
 	
-	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum -Protocol $protocol -Action $action
+	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum -Protocol $protocol -Action $action -ErrorVariable $EditRule -ErrorAction Continue
 	
+    if ($EditRule) {
+
+        Write-Output "[-] Error in editing firewall rule" | Out-File -FilePath "$toolsPath\ErrLog.txt" -InputObject $errStr
+
+    }
+
 	Write-Host "[+] changed firewall rule for $port"
 }
 
@@ -201,16 +328,39 @@ function changeCreds {
 
 	Write-Host "[+] You are about to change the username of the current admin"
 	$newUsername = Read-Host -Prompt "What is the new name?"
-	Rename-LocalUser -Name "$curUsr" -NewName "$newUsername"
-	Write-Host "[+] New username set"
+	Rename-LocalUser -Name "$curUsr" -NewName "$newUsername" -ErrorVariable $FailUsername -ErrorAction Continue
+	
+    if ($FailUsername) {
+
+        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+        Write-Host "Run step 11 on the hardening checklist"
+
+    }else{
+
+        Write-Host "[+] New username set"
+    
+    }
 
 	Write-Host "[+] You are now about to change your password"
 
 	$Password = Read-Host "Enter the new password" -AsSecureString
-	Get-LocalUser -Name "$curUsr" | Set-LocalUser -Password $Password
+	Get-LocalUser -Name "$curUsr" | Set-LocalUser -Password $Password -ErrorVariable $FailPasswd -ErrorAction Continue
 	
-	Write-Host "[+] changed password for $curUsr"
-	Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
+    if ($FailPasswd) {
+        
+        Write-Output "[-] Error in changing the password" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+        Write-Host "Run step 9 on the hardening checklist"
+
+    }else{
+
+        Write-Host "[+] changed password for $curUsr"
+        Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
+    
+    }
+
+	
 }
 
 function  removeTools {
@@ -220,7 +370,17 @@ function  removeTools {
 
 	Write-Host "[+] Removing the tools directory..."
 
-	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse
+	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
+    
+    if ($RmTools) {
+        
+        $errStr = "[-] Error in trying to remove the Tools directory"
+
+        Out-File -FilePath "$toolsPath\ErrLog.txt" -InputObject $errStr
+        
+        Write-Host $errStr
+         
+    }
 
 	Write-Host "[+] Deleted the tools directory"
 }
@@ -235,15 +395,25 @@ function discovery {
 
 	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
 
-	# prints the results into a nicely formatted table for saving  
+	# -- prints the results of data dumps into a nicely formatted table for saving --
 	$discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
+
+	Write-Host "[+] gathering services..."
 	Get-Service -Verbose | Format-Table -AutoSize > "$discoverypath\services.txt"
+
+	Write-Host "[+] gathering processes..."
 	Get-Process -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+
+	Write-Host "[+] gathering tcp connections..."
 	Get-NetTCPConnection -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+
+	Write-Host "[+] gathering any scheduled tasks..."
 	Get-ScheduledTask -Verbose | Format-Table -AutoSize > "$discoverypath\scheduledtasks.txt"
+
+	Write-Host "[+] gathering any startup apps..."
 	wmic startup list full | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
 
-	Write-Host "[+] dump dumped"
+	Write-Host "[+] data dumped to 'Discovery' folder on your desktop"
 
 }
 
@@ -256,7 +426,8 @@ function setUAC {
 
 	# set the values
 	$path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-	New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorAdmin' -Value 2 -PropertyType DWORD -Force | Out-Null
+	
+    New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorAdmin' -Value 2 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorUser' -Value 3 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'EnableInstallerDetection' -Value 1 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Force | Out-Null
@@ -278,21 +449,28 @@ function DefenderScan {
 
 	# check to make sure windows defender is able to run
 	if (Get-MpComputerStatus) {
-		Write-Host "[+] setting up for scan..."
-		Set-MpPreference -CheckForSignaturesBeforeRunningScan True -CloudBlockLevel
+		
+        Write-Host "[+] setting up for scan..."
+		
+        Set-MpPreference -CheckForSignaturesBeforeRunningScan True -CloudBlockLevel
 
 		Write-Host "[+] removing any exclusions..."
-		# remove all exclusion if there are any
+		
+        # remove all exclusion if there are any
 		$preference = Get-MpPreference
-		foreach ($x in $preference.ExclusionPath) {
-			Remove-MpPreference -ExclusionPath $x
-		}
+		
+        foreach ($x in $preference.ExclusionPath) {
+			
+            Remove-MpPreference -ExclusionPath $x
+		
+        }
 
 		Write-Host "[+] running scan in the background..."
 		
 		# TODO receive output from scan
 		Start-MpScan -ScanType FullScan -AsJob -Verbose
-	}else {
+	
+    }else {
 		Write-Host "[+] error in checking windows defender"
 	}
 	
@@ -304,28 +482,38 @@ function main() {
 	$curUsr = [Environment]::UserName
 	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
 
-	# check if the Tools folder is already created
-	if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
-
-		Write-Host "[+] checking to see if the tools are installed..."
-		if (Get-ChildItem -Path "C:\Users\$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
-
-			installtools ($toolsPath)
-		}
-	}
-
-	Write-Output "[+] choose a mode to run the script"
+	Write-Host "[+] choose a mode to run the script"
 	Start-Sleep -Milliseconds 500
-	Write-Output "[+] harden will start the hardening process on the current machine"
+	Write-Host "[+] harden will start the hardening process on the current machine"
 	Start-Sleep -Milliseconds 500
-	Write-Output "[+] control will allow the user to make changes to windows without having to navigate around"
+	Write-Host "[+] control will allow the user to make changes to windows without having to navigate around"
 	Start-Sleep -Milliseconds 500
+    Write-Host "[+] if any errors are made, a message will be printed to the console and stored into \Desktop\Tools\ErrLog.txt"
+
 	$usermode = Read-Host -Prompt "(Harden) or (Control)"
-	if ($usermode -eq "harden" -or "Harden") {
+	if ($usermode -eq ("harden" -or "Harden")) {
+        
+        # check if the Tools folder is already created
+	    if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
+
+		    Write-Host "[+] checking to see if the tools are installed..."
+		    
+            if (Get-ChildItem -Path "C:\Users\$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
+
+			    installtools ($toolsPath)
+		    
+            }
+	    }
 
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
-		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$toolsPath\mb.exe"
+		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$toolsPath\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
+
+        if ($DOWNMB) {
+        
+            Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+        }
 
 		# Run Malwarebytes
 		Write-Host "[+] click to install the software"
@@ -338,9 +526,11 @@ function main() {
 
 		$user = Get-LocalGroup -Name "guests" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) { 
-			Write-Output "disabling guest: $x"
+			
+            Write-Output "disabling guest: $x"
 			Disable-LocalUser -Name $x
-		}
+		
+        }
 		Write-Host "[+] guest accounts cleared"
 
 		# remove all the non-required admin accounts
@@ -349,34 +539,46 @@ function main() {
 		# TODO check to make sure this works
 		$user = Get-LocalGroup -Name "Administrators" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) {
-			if ($curUsr -notmatch $user) {
-				Write-Output "disabling admin: $x"
-				Remove-LocalGroupMember -Group "Administrators" "$x"
-			}
+		   
+        	if ($curUsr -notmatch $user) {
+		
+        		Write-Output "disabling admin: $x"
+		   		Remove-LocalGroupMember -Group "Administrators" "$x"
+			
+            }
 		}
 		Write-Host "[+] pruned Administrator accounts"
 
+
 		# harden the firewall for remote or lan comps
 		$winFirewallOn = Read-Host -Prompt "Do you want to turn on the windows firewall (y)"
-		if ($winFirewallOn -eq "y" -or "Y") {
-			$mode = Read-Host -Prompt "lan or remote (lan) or (remote)"
+		if ($winFirewallOn -eq ("y" -or "Y")) {
+			
+            $mode = Read-Host -Prompt "lan or remote (lan) or (remote)"
 			winFire
-		}
+		
+        }
+
 
 		$hardenExch = Read-Host -Prompt "Do you want to Harden Exchange (y)"
-		if ($hardenExch -eq "y" -or "Y") {
-			ExchangeHard
+		if ($hardenExch -eq ("y" -or "Y")) {
+            if (Get-Service -DisplayName "Exchange"
+			$isExchange = $true
+            ExchangeHard $isExchange
 		}
+
 
 		# turn on Windows Defender
 		# Windows 8.1 (server 2016+) should already be on
 		if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
-			$turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
+			
+            $turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
 			# TODO need to test
 
 			Write-Host "Enabling Windows Defender..."
-			if ($turnDefenderOn -eq "y") {
-				Set-MpPreference -DisableRealtimeMonitoring $false
+			if ($turnDefenderOn -eq ("y" -or "Y")) {
+			
+            	Set-MpPreference -DisableRealtimeMonitoring $false
 				Set-MpPreference -DisableIOAVProtection $false
 				New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
 				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
@@ -385,57 +587,100 @@ function main() {
 				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
 				start-service WinDefend
 				start-service WdNisSvc	
+			
+            }
+
+            if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $true) {
+                Write-Host "Windows Defender Enabled"
+            }else{
+                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
 			}
-			Write-Host "Windows Defender Enabled"
 
 		}
 		
-		# start all the tools to find any possible weird things running
+		# start all the installed tools to find any possible weird things running
 		toolstart($toolsPath)
+
 
 		# change the execution policy for powershell for admins only (works for the current machine)
 		# rest of restrictions happen in group policy and active directory
 		Write-Host "[+] changing powershell policy..."
-		Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine
-		Write-Host "[+] Changed the Powershell policy to Restricted"
+		
+        Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue -ErrorVariable $SETPOW 
 
-		# disable WinRM
+        if ($SETPOW) {
+            
+            Write-Output "[-] Error in changing the execution policy to restricted" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        
+        }else{
+    	
+    	    Write-Host "[+] Changed the Powershell policy to Restricted"
+        
+        }
+	   
+
+    	# disable WinRM
 		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
-		if ($disableWinRm -eq "y" -or "Y") {
-			Disable-PSRemoting -Force
-			Write-Host "[+] disabled WinRm"
-		}
+	
+    	if ($disableWinRm -eq ("y" -or "Y")) {
+	   
+    		Disable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE 
+            
+            if ($PSRREMOTE) {
+
+                Write-Output "[-] Error in disabling WinRm" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+            }else{
+
+			    Write-Host "[+] disabled WinRm"
+	        
+            }
+    	}
+
 
 		# change the password/username of the current admin
 		changeCreds($curUsr)
 		
+
 		# setup UAC
 		setUAC
 
+
 		# disable anonymous logins
 		Write-Host "[+] disabling anonymous users..."
+
 		Set-CsAccessEdgeConfiguration -AllowAnonymousUsers $False
+
 		Write-Host "[+] disabled anonymous users"
+
 
 		# TODO enable/install wdac/applocker/or DeepBlue CLi?
 
 
-		# disable netbios ??????(might be to good)
-		$adapters=(Get-WmiObject win32_networkadapterconfiguration )
-		foreach ($adapter in $adapters){
-			Write-Host $adapter
-			$adapter.settcpipnetbios(0)
-		}
 
-		# update windows potentially
+		# disable netbios ??????(might be too good)
+		$adapters=(Get-WmiObject win32_networkadapterconfiguration )
+		
+        foreach ($adapter in $adapters){
+		   
+        	Write-Host $adapter
+			$adapter.settcpipnetbios(0)
+		
+        }
+
+		
+        # update windows if it is in the scope of the rules
 		$updates = Read-Host -Prompt "Do you want to update (y)"
-		if ($updates -eq "y" -or "Y") {
+		
+        if ($updates -eq ("y" -or "Y")) {
 			winUP
 		}
 
+
 	}else{
 		while($true) {
-			Write-Host "[+] what would you like to do
+			
+            Write-Host "[+] what would you like to do
 			- edit a firewall rule(1)
 			- change a group policy(2)
 			- Change Password(3)
@@ -446,14 +691,16 @@ function main() {
 			- DefenderScan(8)
 			- quit
 			"
-			$choice = Read-Host 
+			
+            $choice = Read-Host 
 			switch ($choice) {
 
 				"1" {
 					$portNum = Read-Host -Prompt "which port (num)"
 					$action = Read-Host -Prompt "(allow) or (block)"
 					$direction = Read-Host -Prompt "which direction (in) or (out)"
-					editFirewallRule ($portNum, $action, $direction)
+					
+                    editFirewallRule ($portNum, $action, $direction, $toolsPath)
 				}
 
 				"2" {
@@ -463,21 +710,27 @@ function main() {
 
 				"3" {changeCreds($curUsr)}
 
-				"4" {installtools($toolsPath, $curUsr)}
+				
+                "4" {installtools($toolsPath, $curUsr)}
 
-				"5" {toolstart($toolsPath)}
+				
+                "5" {toolstart($toolsPath)}
 
-				"6" {removeTools($toolsPath)}
+				
+                "6" {removeTools($toolsPath)}
 
-				"7" {discovery($curUsr)}
+				
+                "7" {discovery($curUsr)}
 
-				"8" {DefenderScan}
+				
+                "8" {DefenderScan}
 
-				"quit" {break}
+				
+                "quit" {break}
 
-				default {continue}
+				
+                default {continue}
 			} 
 		}
 	}
 }
-
