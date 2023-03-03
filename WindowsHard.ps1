@@ -308,7 +308,7 @@ function winFire {
 
         Write-Host "[+] finished hardening firewall"
         Write-Host "[+] remember to do a deeper dive later and patch any holes"
-    }else if ($mode = "undo") {
+    }elif ($mode = "undo") {
         Set-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Enabled $false
         Set-NetFirewallRule -DisplayName "block all ports not in current use" -Enabled $false
 
@@ -404,7 +404,7 @@ function  removeTools {
 
 function discovery {
 	param (
-		$curUsr	
+		$curUsr,	
         $mode
 	)
 
@@ -464,7 +464,7 @@ function setUAC {
     New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorAdmin' -Value 2 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorUser' -Value 3 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'EnableInstallerDetection' -Value 1 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Fo, $statusrce | Out-Null
+	New-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'EnableVirtualization' -Value 1 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'PromptOnSecureDesktop' -Value 1 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'ValidateAdminCodeSignatures' -Value 0 -PropertyType DWORD -Force | Out-Null
@@ -542,7 +542,7 @@ function enableDefenderOn {
             }else{
                 Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
             }
-        }else if (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
+        }elif (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
 
             Write-Host "Stopping Windows Defender..."
 
@@ -918,7 +918,7 @@ function main {
                     
                     Write-Host "Remember that functions already exist that can undo"
 
-                    Undo()
+                    Undo
 
                 }
                 
