@@ -175,10 +175,19 @@ function EditGPO {
 # perform tasks to harden Exchange
 function ExchangeHard {
 	param (
-        $isExchange
+        $mode
 	)
     
     Import-Module ExchangePowerShell
+
+    if ($mode = "undo") {
+        # do the hardening
+    }
+
+    if ($mode = "undo") {
+
+        # do the unhardening
+    }
 
     
 }
@@ -204,9 +213,9 @@ function winUP {
 
 	    Import-Module PSWindowsUpdate
         
-        Write-Host "[+] This will work in the background and Reboot when finished"
+        Write-Host "[+] This will work in the background and will need to Reboot when finished"
 	
-	    Get-WindowsUpdate -AcceptAll -Install -AutoReboot
+	    Get-WindowsUpdate -AcceptAll -Install
     }
 
 	
@@ -217,7 +226,7 @@ function winUP {
 # winfire only blocks certain ports at the moment
 function winFire {
 	param (
-
+       $mode 
 	)
 
 	Write-Host "[+] hardening firewall with $mode..."
@@ -293,24 +302,32 @@ function winFire {
 	}
 
 	# TODO supposed to allow already existing connections and remove ports that aren't being used
-	New-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Direction Inbound -LocalPort $a.LocalPort -Action Allow
-	New-NetFirewallRule -DisplayName "block all ports not in current use" -Direction Inbound -LocalPort Any -Action Block
+    if ($mode -eq "Harden") {
+        New-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Direction Inbound -LocalPort $a.LocalPort -Action Allow
+        New-NetFirewallRule -DisplayName "block all ports not in current use" -Direction Inbound -LocalPort Any -Action Block
 
-	Write-Host "[+] finished hardening firewall"
-    Write-Host "[+] remember to do a deeper dive later and patch any holes"
+        Write-Host "[+] finished hardening firewall"
+        Write-Host "[+] remember to do a deeper dive later and patch any holes"
+    }else if ($mode = "undo") {
+        Set-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Enabled $false
+        Set-NetFirewallRule -DisplayName "block all ports not in current use" -Enabled $false
+
+        Write-Host "[+] disabled the firewall rules created during hardening"
+        Write-Host "[+] re-enable or edit it manually in Windows Advanced Firewall"
+    }
 }
 
 
 # open/close the ports that are requested
 function editFirewallRule {
 	param (
-		$portNum, $action, $direction, $protocol, $toolsPath
+		$portNum, $action, $direction, $protocol, $toolsPath, $status
 	)
 
 	Write-Host "[+] editing firewall rule..."
 	
-	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum -Protocol $protocol -Action $action -ErrorVariable $EditRule -ErrorAction Continue
-	
+	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status -ErrorVariable $EditRule -ErrorAction Continue
+    
     if ($EditRule) {
 
         Write-Output "[-] Error in editing firewall rule" | Out-File -FilePath "$toolsPath\ErrLog.txt" -InputObject $errStr
@@ -370,15 +387,15 @@ function  removeTools {
 
 	Write-Host "[+] Removing the tools directory..."
 
+    # todo need to setup uninstallation of python and malwarebytes
+    #
+
+    # remove the directory with all of the installed tools in it
 	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
     
     if ($RmTools) {
         
-        $errStr = "[-] Error in trying to remove the Tools directory"
-
-        Out-File -FilePath "$toolsPath\ErrLog.txt" -InputObject $errStr
-        
-        Write-Host $errStr
+        Write-Output "[-] Error in trying to remove the Tools directory" | Out-File -FilePath "$toolsPath\ErrLog.txt"
          
     }
 
@@ -388,32 +405,49 @@ function  removeTools {
 function discovery {
 	param (
 		$curUsr	
+        $mode
 	)
 
-	Write-Host "[+] running discovery dump..."
-	Write-Host "[+] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED"
+    $discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
 
-	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
+    #note in this case removing the dump is = "undoing it"
+    if ($mode -eq "undo") {
+        
+	    Remove-Item -LiteralPath "$discoverypath" -Force -Recurse -ErrorVariable $RmDiscovery -ErrorAction Continue
 
-	# -- prints the results of data dumps into a nicely formatted table for saving --
-	$discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
+        if ($RmDiscovery) {
 
-	Write-Host "[+] gathering services..."
-	Get-Service -Verbose | Format-Table -AutoSize > "$discoverypath\services.txt"
+            Write-Output "[-] Error in trying to remove the discovery dump" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        
+        }
 
-	Write-Host "[+] gathering processes..."
-	Get-Process -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+    } else { 
 
-	Write-Host "[+] gathering tcp connections..."
-	Get-NetTCPConnection -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+        Write-Host "[+] running discovery dump..."
+        Write-Host "[+] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED"
 
-	Write-Host "[+] gathering any scheduled tasks..."
-	Get-ScheduledTask -Verbose | Format-Table -AutoSize > "$discoverypath\scheduledtasks.txt"
+        New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
 
-	Write-Host "[+] gathering any startup apps..."
-	wmic startup list full | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
+        # -- prints the results of data dumps into a nicely formatted table for saving --
 
-	Write-Host "[+] data dumped to 'Discovery' folder on your desktop"
+        Write-Host "[+] gathering services..."
+        Get-Service -Verbose | Format-Table -AutoSize > "$discoverypath\services.txt"
+
+        Write-Host "[+] gathering processes..."
+        Get-Process -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+
+        Write-Host "[+] gathering tcp connections..."
+        Get-NetTCPConnection -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+
+        Write-Host "[+] gathering any scheduled tasks..."
+        Get-ScheduledTask -Verbose | Format-Table -AutoSize > "$discoverypath\scheduledtasks.txt"
+
+        Write-Host "[+] gathering any startup apps..."
+        wmic startup list full | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
+
+        Write-Host "[+] data dumped to 'Discovery' folder on your desktop"
+    
+    }
 
 }
 
@@ -430,7 +464,7 @@ function setUAC {
     New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorAdmin' -Value 2 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorUser' -Value 3 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'EnableInstallerDetection' -Value 1 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Force | Out-Null
+	New-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Fo, $statusrce | Out-Null
 	New-ItemProperty -Path $path -Name 'EnableVirtualization' -Value 1 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'PromptOnSecureDesktop' -Value 1 -PropertyType DWORD -Force | Out-Null
 	New-ItemProperty -Path $path -Name 'ValidateAdminCodeSignatures' -Value 0 -PropertyType DWORD -Force | Out-Null
@@ -476,22 +510,71 @@ function DefenderScan {
 	
 }
 
-function main() {
-	# TODO add way to revert all changes so that fixes can be made
 
-	$curUsr = [Environment]::UserName
-	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
+function enableDefenderOn {
+    param (
+        $mode,
+        $step
+    )
 
-	Write-Host "[+] choose a mode to run the script"
-	Start-Sleep -Milliseconds 500
-	Write-Host "[+] harden will start the hardening process on the current machine"
-	Start-Sleep -Milliseconds 500
-	Write-Host "[+] control will allow the user to make changes to windows without having to navigate around"
-	Start-Sleep -Milliseconds 500
-    Write-Host "[+] if any errors are made, a message will be printed to the console and stored into \Desktop\Tools\ErrLog.txt"
+    if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
+        
+        $turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y) or (undo)"
+        # TODO need to test
 
-	$usermode = Read-Host -Prompt "(Harden) or (Control)"
-	if ($usermode -eq ("harden" -or "Harden")) {
+        
+        if ($turnDefenderOn -eq ("y" -or "Y")) {
+        
+            Write-Host "Enabling Windows Defender..."
+
+            Set-MpPreference -DisableRealtimeMonitoring $false
+            Set-MpPreference -DisableIOAVProtection $false
+            New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
+            New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
+            New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
+            New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
+            New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
+            start-service WinDefend
+            start-service WdNisSvc	
+        
+            if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $true) {
+                Write-Host "Windows Defender Enabled"
+            }else{
+                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+            }
+        }else if (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
+
+            Write-Host "Stopping Windows Defender..."
+
+            Stop-Service WdNisSvc
+            Stop-Service WinDefend
+            Set-MpPreference -DisableRealtimeMonitoring $true
+            Set-MpPreference -DisableIOAVProtection $true
+            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
+            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
+            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
+            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
+            Remove-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
+
+            if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
+                Write-Host "Windows Defender Disabled"
+            }else{
+                Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+            }
+        }
+
+    }
+}
+
+
+function Harden() {
+    param (
+       $curUsr,
+       $toolsPath,
+       $mode
+    )
+        
+        
         
         # check if the Tools folder is already created
 	    if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
@@ -524,6 +607,7 @@ function main() {
 		#Long but disables all guests
 		Write-Host "[+] clearing out guest accounts..."
 
+        # note this should not need undo because no quests accounts should be allowed
 		$user = Get-LocalGroup -Name "guests" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) { 
 			
@@ -536,7 +620,8 @@ function main() {
 		# remove all the non-required admin accounts
 		Write-Host "[+] removing all admin accounts...execpt yours"
 
-		# TODO check to make sure this works
+		# TODO this only works if the admin group is called "Administrators"
+        # note this should not need undo because it only removes the account from the Administrators group
 		$user = Get-LocalGroup -Name "Administrators" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) {
 		   
@@ -554,49 +639,26 @@ function main() {
 		$winFirewallOn = Read-Host -Prompt "Do you want to turn on the windows firewall (y)"
 		if ($winFirewallOn -eq ("y" -or "Y")) {
 			
-            $mode = Read-Host -Prompt "lan or remote (lan) or (remote)"
-			winFire
+			winFire ($mode, $step)
 		
         }
 
 
 		$hardenExch = Read-Host -Prompt "Do you want to Harden Exchange (y)"
 		if ($hardenExch -eq ("y" -or "Y")) {
-            if (Get-Service -DisplayName "Exchange"
-			$isExchange = $true
-            ExchangeHard $isExchange
+            
+            # Todo need to fix to find services that are only on Exchange Server
+            if (Get-Service -DisplayName "Exchange") {
+
+                ExchangeHard ($mode)
+            
+            }
 		}
 
 
 		# turn on Windows Defender
 		# Windows 8.1 (server 2016+) should already be on
-		if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
-			
-            $turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y)"
-			# TODO need to test
-
-			Write-Host "Enabling Windows Defender..."
-			if ($turnDefenderOn -eq ("y" -or "Y")) {
-			
-            	Set-MpPreference -DisableRealtimeMonitoring $false
-				Set-MpPreference -DisableIOAVProtection $false
-				New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
-				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
-				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
-				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
-				New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
-				start-service WinDefend
-				start-service WdNisSvc	
-			
-            }
-
-            if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $true) {
-                Write-Host "Windows Defender Enabled"
-            }else{
-                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
-			}
-
-		}
+        enableDefenderOn($mode, $step)
 		
 		# start all the installed tools to find any possible weird things running
 		toolstart($toolsPath)
@@ -676,61 +738,195 @@ function main() {
 			winUP
 		}
 
+}
 
-	}else{
-		while($true) {
-			
+function Undo {
+    param (
+        $curUsr,
+        $toolsPath
+    )
+
+        [String]$mode = "undo"
+
+        Write-Host "
+        - (1) To uninstall all tool installed  use removeTools in the control menu
+        - (2) winfire
+        - (3) Exchange(TODO)
+        - (4) Windows Defender
+        - (5) Psh Policy
+        - (6) Enable WinRM(?????)
+        - (7) re-enable netbios(todo)
+        "
+
+        [Int]$step = Read-Host -Prompt "What step do you want to undo"
+
+        switch ($step) {
+
+        "2" { winfire($mode) }
+
+        "3" { 
+
+            # Todo need to fix to find services that are only on Exchange Server
+            if (Get-Service -DisplayName "Exchange") {
+
+                ExchangeHard ($mode) 
+                
+            }else {
+
+                Write-Host "this machine is not runnning an Exchange instance"
+                
+            }
+        }
+
+        "4" {
+
+            enableDefenderOn($mode)
+
+        }
+
+        "5" {
+
+            Write-Host "[+] changing powershell policy..."
+		
+            Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope LocalMachine -ErrorAction Continue -ErrorVariable $SETPOW -Confirm
+
+            if ($SETPOW) {
+                
+                Write-Output "[-] Error in changing the execution policy to Undefined" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+            
+            }else{
+            
+                Write-Host "[+] Changed the Powershell policy to Undefined"
+            
+            }
+        }
+
+        "6" {
+
+            # note need to confirm that we want this first 
+            break;
+
+            # enable WinRM
+            $enableWinRm = Read-Host -Prompt "enable WinRm? (y) or (n), WARNING his will make your machine vulnerable to RCE"
+        
+            if ($enableWinRm -eq ("y" -or "Y")) {
+           
+                Enable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE -Confirm
+                
+                if ($PSRREMOTE) {
+
+                    Write-Output "[-] Error in enabling WinRm" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+
+                }else{
+
+                    Write-Host "[+] Enabled WinRm"
+                
+                }
+            }
+
+        }
+
+        default {continue}
+    }
+
+}
+
+
+function main {
+    param (
+
+    )
+
+	$curUsr = [Environment]::UserName
+	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
+
+	Write-Host "[+] choose a mode to run the script"
+	Start-Sleep -Milliseconds 500
+	Write-Host "[+] harden will start the hardening process on the current machine"
+	Start-Sleep -Milliseconds 500
+	Write-Host "[+] control will allow the user to make changes to windows without having to navigate around"
+	Start-Sleep -Milliseconds 500
+    Write-Host "[+] if any errors are made, a message will be printed to the console and stored into \Desktop\Tools\ErrLog.txt"
+
+	$usermode = Read-Host -Prompt "(Harden) or (Control)"
+	if ($usermode -eq ("harden" -or "Harden")) {
+        $mode = "Harden";
+        Harden($curUsr, $toolsPath, $mode)
+    } else {
+
+        while($true) {
             Write-Host "[+] what would you like to do
-			- edit a firewall rule(1)
-			- change a group policy(2)
-			- Change Password(3)
-			- Install Tools(4)
-			- Start Tools(5)
-			- Remove Tools(6)
-			- Discovery(7)
-			- DefenderScan(8)
-			- quit
-			"
-			
+            - edit a firewall rule(1)
+            - change a group policy(2)
+            - Change Password(3)
+            - Install Tools(4)
+            - Start Tools(5)
+            - Remove Tools(6)
+            - Discovery(7)
+            - DefenderScan(8)
+            - Undo(9)
+            - quit
+            "
+            
             $choice = Read-Host 
-			switch ($choice) {
+            switch ($choice) {
 
-				"1" {
-					$portNum = Read-Host -Prompt "which port (num)"
-					$action = Read-Host -Prompt "(allow) or (block)"
-					$direction = Read-Host -Prompt "which direction (in) or (out)"
-					
-                    editFirewallRule ($portNum, $action, $direction, $toolsPath)
-				}
+                "1" {
+                    [Int]$portNum = Read-Host -Prompt "which port (num)"
+                    $action = Read-Host -Prompt "(allow) or (block)"
+                    $direction = Read-Host -Prompt "which direction (in) or (out)"
+                    [Bool]$status = Read-Host -Prompt "to create the rule use True
+                    to undo use false"
+                    
+                    editFirewallRule ($portNum, $action, $direction, $toolsPath, $status)
+                }
 
-				"2" {
+                "2" {
 
-					# TODO populate this with stuff after group policy is added
-				}
+                    # TODO populate this with stuff after group policy is added
+                }
 
-				"3" {changeCreds($curUsr)}
+                "3" {changeCreds($curUsr)}
 
-				
+                
                 "4" {installtools($toolsPath, $curUsr)}
 
-				
+                
                 "5" {toolstart($toolsPath)}
 
-				
+                
                 "6" {removeTools($toolsPath)}
 
-				
-                "7" {discovery($curUsr)}
+                
+                "7" {
 
-				
+                    Write-Host "Do you want to perform a dump (y) or (n), 
+                    WARNING (n) will remove the dump"
+
+                    $mode = Read-Host -Prompt "What mode?"
+                    
+                    discovery($curUsr, $mode)
+                }
+
+                
                 "8" {DefenderScan}
 
-				
+
+                "9" {
+                    
+                    # TODO write the undo steps once they are created
+                    
+                    Write-Host "Remember that functions already exist that can undo"
+
+                    Undo()
+
+                }
+                
                 "quit" {break}
 
-				
+                
                 default {continue}
-			} 
-		}
-	}
+            } 
+        }
+    }
 }
