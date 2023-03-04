@@ -387,8 +387,13 @@ function  removeTools {
 
 	Write-Host "[+] Removing the tools directory..."
 
-    # todo need to setup uninstallation of python and malwarebytes
-    #
+    # Todo need to setup uninstallation of python and malwarebytes
+    $remInst = Read-Host -Prompt "Do you want to install python3 and malwarebytes" 
+    if ($remInst -eq ("y" -or "Y")) {
+
+        # do stuff here   
+
+    }
 
     # remove the directory with all of the installed tools in it
 	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
@@ -607,7 +612,7 @@ function Harden() {
 		#Long but disables all guests
 		Write-Host "[+] clearing out guest accounts..."
 
-        # note this should not need undo because no quests accounts should be allowed
+        # note this should not need undo because no guests accounts should be allowed
 		$user = Get-LocalGroup -Name "guests" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) { 
 			
@@ -755,7 +760,7 @@ function Undo {
         - (4) Windows Defender
         - (5) Psh Policy
         - (6) Enable WinRM(?????)
-        - (7) re-enable netbios(todo)
+        - (7) re-enable netbios(Todo)
         "
 
         [Int]$step = Read-Host -Prompt "What step do you want to undo"
