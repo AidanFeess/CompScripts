@@ -2,6 +2,7 @@ Import-Module Defender
 Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
+Import-Module Microsoft.PowerShell.Core
 Import-Module Microsoft.PowerShell.LocalAccounts
 Import-Module Microsoft.PowerShell.Utility
 Import-Module ScheduledTasks
@@ -309,6 +310,7 @@ function winFire {
 
         Write-Host "[+] finished hardening firewall"
         Write-Host "[+] remember to do a deeper dive later and patch any holes"
+
     }elif ($mode = "undo") {
         Set-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Enabled $false
         Set-NetFirewallRule -DisplayName "block all ports not in current use" -Enabled $false
@@ -592,7 +594,7 @@ function enableDefenderOn {
 }
 
 
-function Harden() {
+function Harden {
     param (
        $curUsr,
        $toolsPath,
@@ -632,10 +634,10 @@ function Harden() {
 
         # note this should not need undo because no guests accounts should be allowed
 		$user = Get-LocalGroup -Name "guests" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
-		foreach ($x in $user) { 
+		foreach ($j in $user) { 
 			
-            Write-Output "disabling guest: $x"
-			Disable-LocalUser -Name $x
+            Write-Output "disabling guest: $j"
+			Disable-LocalUser -Name $j
 		
         }
 		Write-Host "[+] guest accounts cleared"
@@ -643,9 +645,22 @@ function Harden() {
 		# remove all the non-required admin accounts
 		Write-Host "[+] removing all admin accounts...execpt yours"
 
-		# TODO this only works if the admin group is called "Administrators"
+        # read the groups and select the correct admin group
+        $a = Get-LocalGroup | Select-Object -Property "Name" | Select-String -Pattern "admin"
+        Write-Host "$a"
+        [Int]$c = Read-Host -Prompt "Which one is the real admin group"
+        foreach ($i in $a) {
+            if ($i -eq $a[$c]) {
+                [String]$adminGroup = $i
+            }
+        }
+
+        # grabs the group name from the object
+        $adminGroup -match '(?<==)[\w]+'
+
+
         # note this should not need undo because it only removes the account from the Administrators group
-		$user = Get-LocalGroup -Name "Administrators" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		$user = Get-LocalGroup -Name $Matches[0] | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) {
 		   
         	if ($curUsr -notmatch $user) {
@@ -654,6 +669,7 @@ function Harden() {
 		   		Remove-LocalGroupMember -Group "Administrators" "$x"
 			
             }
+
 		}
 		Write-Host "[+] pruned Administrator accounts"
 
@@ -950,6 +966,14 @@ function main {
 
                     Undo
 
+                }
+
+                "10" {
+                    
+                    continue;
+                    # TODO finish fun
+                    # Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -Verb RunAsUser 
+                     
                 }
                 
                 "quit" {break}
