@@ -415,9 +415,7 @@ function  removeTools {
         Write-Host "[+] Moving malwarebytes..."
         Move-Item -Path "$toolSPath\mb.exe" -Destination "C:\Users\$curUsr\Desktop\"
         Write-Host "[+] Malwarebytes moved" 
-
-    }
-
+=======
     # remove the directory with all of the installed tools in it
 	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
     
@@ -633,7 +631,7 @@ function Harden() {
 		#Long but disables all guests
 		Write-Host "[+] clearing out guest accounts..."
 
-        # note this should not need undo because no quests accounts should be allowed
+        # note this should not need undo because no guests accounts should be allowed
 		$user = Get-LocalGroup -Name "guests" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) { 
 			
@@ -776,6 +774,7 @@ function Undo {
         [String]$mode = "undo"
 
         Write-Host "
+<<<<<<< HEAD
         - (#) To uninstall all tool installed use removeTools in the control menu
         - (1) winfire
         - (2) Exchange(TODO)
@@ -783,6 +782,15 @@ function Undo {
         - (4) Psh Policy
         - (5) Enable WinRM(why?????)
         - (6) re-enable netbios(TODO)
+=======
+        - (1) To uninstall all tool installed  use removeTools in the control menu
+        - (2) winfire
+        - (3) Exchange(TODO)
+        - (4) Windows Defender
+        - (5) Psh Policy
+        - (6) Enable WinRM(?????)
+        - (7) re-enable netbios(Todo)
+>>>>>>> 1aecc50fd8f102aef4538d2703d763096c811eb3
         "
 
         [Int]$step = Read-Host -Prompt "What step do you want to undo"
