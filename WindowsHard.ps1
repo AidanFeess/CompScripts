@@ -215,7 +215,10 @@ function winUP {
         
         Write-Host "[+] This will work in the background and will need to Reboot when finished"
 	
+        # note this only installs the updates
+        # it will help us control when we bring servers down for updates
 	    Get-WindowsUpdate -AcceptAll -Install
+
     }
 
 	
@@ -297,8 +300,6 @@ function winFire {
 	
     		}
 		}
-
-
 	}
 
 	# TODO supposed to allow already existing connections and remove ports that aren't being used
@@ -382,13 +383,40 @@ function changeCreds {
 
 function  removeTools {
 	param (
-		$toolsPath
+		$toolsPath,
+        $curUsr
 	)
 
 	Write-Host "[+] Removing the tools directory..."
 
-    # todo need to setup uninstallation of python and malwarebytes
-    #
+    $remInstTools = Read-Host -Prompt "Do you want to also remove python3 and malwarebytes (y) or (n)"    
+    if ($remInstTools -eq ("y" -or "Y")) {
+
+        # uninstall python3.11
+        Write-Host "[+] Python will open and you need to click to uninstall it"
+        Start-Sleep (2000)
+        }
+        Invoke-Expression -Command "$toolsPath\python3.11.exe" 
+        Start-Sleep (2000)
+
+        # uninstall malwarebytes
+        Write-Host "[+] Malwarebytes will be uninstalled next, follow the the prompts"
+        Start-Sleep (2000)
+        Invoke-Expression -Command "C:\'Program Files'\Malwarebytes\Anti-Malware\mb4uns.exe"
+
+    }else {
+        
+        # move over the python3.11
+        Write-Host "[+] Moving python3.11..."
+        Move-Item -Path "$toolsPath\python3.11.exe" -Destination "C:\Users\$curUsr\Desktop\" -ErrorVariable $MOVPYTH -ErrorAction Continue
+        Write-Host "[+] Python moved"
+
+        # move over the malwarebytes just in case
+        Write-Host "[+] Moving malwarebytes..."
+        Move-Item -Path "$toolSPath\mb.exe" -Destination "C:\Users\$curUsr\Desktop\"
+        Write-Host "[+] Malwarebytes moved" 
+
+    }
 
     # remove the directory with all of the installed tools in it
 	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
@@ -410,7 +438,7 @@ function discovery {
 
     $discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
 
-    #note in this case removing the dump is = "undoing it"
+    # note in this case removing the dump is = "undoing it"
     if ($mode -eq "undo") {
         
 	    Remove-Item -LiteralPath "$discoverypath" -Force -Recurse -ErrorVariable $RmDiscovery -ErrorAction Continue
@@ -502,7 +530,7 @@ function DefenderScan {
 		Write-Host "[+] running scan in the background..."
 		
 		# TODO receive output from scan
-		Start-MpScan -ScanType FullScan -AsJob -Verbose
+		Start-MpScan -ScanType FullScan -ScanPath C: -AsJob -OutVariable scanOut
 	
     }else {
 		Write-Host "[+] error in checking windows defender"
@@ -573,8 +601,6 @@ function Harden() {
        $toolsPath,
        $mode
     )
-        
-        
         
         # check if the Tools folder is already created
 	    if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
@@ -647,8 +673,9 @@ function Harden() {
 		$hardenExch = Read-Host -Prompt "Do you want to Harden Exchange (y)"
 		if ($hardenExch -eq ("y" -or "Y")) {
             
-            # Todo need to fix to find services that are only on Exchange Server
-            if (Get-Service -DisplayName "Exchange") {
+            # looks for services that have "Exchange"
+            # seems to be the naming convention
+            if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
 
                 ExchangeHard ($mode)
             
@@ -749,42 +776,45 @@ function Undo {
         [String]$mode = "undo"
 
         Write-Host "
-        - (1) To uninstall all tool installed  use removeTools in the control menu
-        - (2) winfire
-        - (3) Exchange(TODO)
-        - (4) Windows Defender
-        - (5) Psh Policy
-        - (6) Enable WinRM(?????)
-        - (7) re-enable netbios(todo)
+        - (#) To uninstall all tool installed use removeTools in the control menu
+        - (1) winfire
+        - (2) Exchange(TODO)
+        - (3) Windows Defender
+        - (4) Psh Policy
+        - (5) Enable WinRM(why?????)
+        - (6) re-enable netbios(TODO)
         "
 
         [Int]$step = Read-Host -Prompt "What step do you want to undo"
 
         switch ($step) {
 
-        "2" { winfire($mode) }
+        "1" { winfire($mode) }
 
-        "3" { 
+        "2" { 
+            
+            continue;
 
-            # Todo need to fix to find services that are only on Exchange Server
-            if (Get-Service -DisplayName "Exchange") {
+            # looks for services that have "Exchange"
+            # seems to be the naming convention
+            if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
 
                 ExchangeHard ($mode) 
                 
             }else {
 
-                Write-Host "this machine is not runnning an Exchange instance"
+                Write-Host "This machine is not runnning Exchange"
                 
             }
         }
 
-        "4" {
+        "3" {
 
             enableDefenderOn($mode)
 
         }
 
-        "5" {
+        "4" {
 
             Write-Host "[+] changing powershell policy..."
 		
@@ -801,7 +831,7 @@ function Undo {
             }
         }
 
-        "6" {
+        "5" {
 
             # note need to confirm that we want this first 
             break;
@@ -826,7 +856,9 @@ function Undo {
 
         }
 
-        default {continue}
+        "6" { continue }
+
+        default { continue }
     }
 
 }
@@ -857,7 +889,7 @@ function main {
         while($true) {
             Write-Host "[+] what would you like to do
             - edit a firewall rule(1)
-            - change a group policy(2)
+            - change a group policy(2)(TODO)
             - Change Password(3)
             - Install Tools(4)
             - Start Tools(5)
@@ -865,6 +897,7 @@ function main {
             - Discovery(7)
             - DefenderScan(8)
             - Undo(9)
+            - Start Wonk(???)
             - quit
             "
             
@@ -883,6 +916,8 @@ function main {
 
                 "2" {
 
+                    continue;
+
                     # TODO populate this with stuff after group policy is added
                 }
 
@@ -895,7 +930,7 @@ function main {
                 "5" {toolstart($toolsPath)}
 
                 
-                "6" {removeTools($toolsPath)}
+                "6" {removeTools($toolsPath, $curUsr)}
 
                 
                 "7" {
@@ -913,8 +948,6 @@ function main {
 
 
                 "9" {
-                    
-                    # TODO write the undo steps once they are created
                     
                     Write-Host "Remember that functions already exist that can undo"
 
