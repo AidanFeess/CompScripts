@@ -8,7 +8,7 @@ Import-Module Microsoft.PowerShell.Utility
 Import-Module ScheduledTasks
 
 # install the list of tools
-function installtools {
+function InstallTools {
 	param (
 		$toolsPath,
 		$curUsr
@@ -82,7 +82,7 @@ function installtools {
 }
 
 # once tools are run winpeas and parse the output and save it
-function toolstart {
+function ToolStart {
 	param (
 		$toolsPath
 	)
@@ -195,7 +195,7 @@ function ExchangeHard {
 
 
 # updates windows
-function winUP {
+function WinUP {
 	param (
 		
 	)
@@ -221,14 +221,11 @@ function winUP {
 	    Get-WindowsUpdate -AcceptAll -Install
 
     }
-
-	
-
 }
 
 
 # winfire only blocks certain ports at the moment
-function winFire {
+function WinFire {
 	param (
        $mode 
 	)
@@ -311,7 +308,7 @@ function winFire {
         Write-Host "[+] finished hardening firewall"
         Write-Host "[+] remember to do a deeper dive later and patch any holes"
 
-    }elif ($mode = "undo") {
+    }elseif ($mode = "undo") {
         Set-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Enabled $false
         Set-NetFirewallRule -DisplayName "block all ports not in current use" -Enabled $false
 
@@ -322,7 +319,7 @@ function winFire {
 
 
 # open/close the ports that are requested
-function editFirewallRule {
+function EditFirewallRule {
 	param (
 		$portNum, $action, $direction, $protocol, $toolsPath, $status
 	)
@@ -341,7 +338,7 @@ function editFirewallRule {
 }
 
 # change the password on admin account
-function changeCreds {
+function ChangeCreds {
 	param (
 		$curUsr
 	)
@@ -379,11 +376,9 @@ function changeCreds {
         Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
     
     }
-
-	
 }
 
-function  removeTools {
+function  RemoveTools {
 	param (
 		$toolsPath,
         $curUsr
@@ -430,7 +425,7 @@ function  removeTools {
 	Write-Host "[+] Deleted the tools directory"
 }
 
-function discovery {
+function Discovery {
 	param (
 		$curUsr,	
         $mode
@@ -476,10 +471,9 @@ function discovery {
         Write-Host "[+] data dumped to 'Discovery' folder on your desktop"
     
     }
-
 }
 
-function setUAC {
+function SetUAC {
 	param (
 		
 	)
@@ -501,13 +495,11 @@ function setUAC {
 	Write-Host "[+] values set"
 }
 
-
+# runs a basic windows defender scan
 function DefenderScan {
 	param (
 		
 	)
-
-	# runs a basic windows defender scan	
 
 	# check to make sure windows defender is able to run
 	if (Get-MpComputerStatus) {
@@ -538,7 +530,7 @@ function DefenderScan {
 }
 
 
-function enableDefenderOn {
+function EnableDefenderOn {
     param (
         $mode,
         $step
@@ -548,8 +540,7 @@ function enableDefenderOn {
         
         $turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y) or (undo)"
         # TODO need to test
-
-        
+    
         if ($turnDefenderOn -eq ("y" -or "Y")) {
         
             Write-Host "Enabling Windows Defender..."
@@ -569,7 +560,7 @@ function enableDefenderOn {
             }else{
                 Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
             }
-        }elif (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
+        }elseif (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
 
             Write-Host "Stopping Windows Defender..."
 
@@ -589,7 +580,6 @@ function enableDefenderOn {
                 Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
             }
         }
-
     }
 }
 
@@ -608,7 +598,7 @@ function Harden {
 		    
             if (Get-ChildItem -Path "C:\Users\$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
 
-			    installtools ($toolsPath)
+			    InstallTools ($toolsPath)
 		    
             }
 	    }
@@ -616,7 +606,6 @@ function Harden {
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
 		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$toolsPath\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
-
         if ($DOWNMB) {
         
             Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
@@ -658,18 +647,15 @@ function Harden {
         # grabs the group name from the object
         $adminGroup -match '(?<==)[\w]+'
 
-
         # note this should not need undo because it only removes the account from the Administrators group
 		$user = Get-LocalGroup -Name $Matches[0] | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
 		foreach ($x in $user) {
-		   
         	if ($curUsr -notmatch $user) {
 		
         		Write-Output "disabling admin: $x"
 		   		Remove-LocalGroupMember -Group "Administrators" "$x"
 			
             }
-
 		}
 		Write-Host "[+] pruned Administrator accounts"
 
@@ -678,7 +664,7 @@ function Harden {
 		$winFirewallOn = Read-Host -Prompt "Do you want to turn on the windows firewall (y)"
 		if ($winFirewallOn -eq ("y" -or "Y")) {
 			
-			winFire ($mode, $step)
+			WinFire ($mode, $step)
 		
         }
 
@@ -698,10 +684,10 @@ function Harden {
 
 		# turn on Windows Defender
 		# Windows 8.1 (server 2016+) should already be on
-        enableDefenderOn($mode, $step)
+        EnableDefenderOn($mode, $step)
 		
 		# start all the installed tools to find any possible weird things running
-		toolstart($toolsPath)
+		ToolStart($toolsPath)
 
 
 		# change the execution policy for powershell for admins only (works for the current machine)
@@ -723,7 +709,6 @@ function Harden {
 
     	# disable WinRM
 		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
-	
     	if ($disableWinRm -eq ("y" -or "Y")) {
 	   
     		Disable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE 
@@ -741,11 +726,11 @@ function Harden {
 
 
 		# change the password/username of the current admin
-		changeCreds($curUsr)
+		ChangeCreds($curUsr)
 		
 
 		# setup UAC
-		setUAC
+		SetUAC
 
 
 		# disable anonymous logins
@@ -775,7 +760,7 @@ function Harden {
 		$updates = Read-Host -Prompt "Do you want to update (y)"
 		
         if ($updates -eq ("y" -or "Y")) {
-			winUP
+			WinUP
 		}
 
 }
@@ -789,7 +774,7 @@ function Undo {
         [String]$mode = "undo"
 
         Write-Host "
-        - (#) To uninstall all tool installed use removeTools in the control menu
+        - (#) To uninstall all tool installed use RemoveTools in the control menu
         - (1) winfire
         - (2) Exchange(TODO)
         - (3) Windows Defender
@@ -823,7 +808,7 @@ function Undo {
 
         "3" {
 
-            enableDefenderOn($mode)
+            EnableDefenderOn($mode)
 
         }
 
@@ -877,7 +862,7 @@ function Undo {
 }
 
 
-function main {
+function Main {
     param (
 
     )
@@ -924,7 +909,7 @@ function main {
                     [Bool]$status = Read-Host -Prompt "to create the rule use True
                     to undo use false"
                     
-                    editFirewallRule ($portNum, $action, $direction, $toolsPath, $status)
+                    EditFirewallRule ($portNum, $action, $direction, $toolsPath, $status)
                 }
 
                 "2" {
@@ -934,16 +919,16 @@ function main {
                     # TODO populate this with stuff after group policy is added
                 }
 
-                "3" {changeCreds($curUsr)}
+                "3" {ChangeCreds($curUsr)}
 
                 
-                "4" {installtools($toolsPath, $curUsr)}
+                "4" {InstallTools($toolsPath, $curUsr)}
 
                 
-                "5" {toolstart($toolsPath)}
+                "5" {ToolStart($toolsPath)}
 
                 
-                "6" {removeTools($toolsPath, $curUsr)}
+                "6" {RemoveTools($toolsPath, $curUsr)}
 
                 
                 "7" {
@@ -953,7 +938,7 @@ function main {
 
                     $mode = Read-Host -Prompt "What mode?"
                     
-                    discovery($curUsr, $mode)
+                    Discovery($curUsr, $mode)
                 }
 
                 
@@ -984,3 +969,5 @@ function main {
         }
     }
 }
+
+Main
