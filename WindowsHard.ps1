@@ -91,13 +91,13 @@ function ToolStart {
 
 	# open autoruns, procmon, TCPView
 	Invoke-Expresision -Command "$toolsPath\Procmon\Procmon64.exe"
-	Start-Sleep(500)
+	Start-Sleep -Milliseconds 500
 	
     Invoke-Expresision -Command "$toolsPath\Autoruns\Autoruns64.exe"
-	Start-Sleep(500)
+	Start-Sleep -Milliseconds 500
 	
     Invoke-Expresision -Comand "$toolsPath\TCPView\tcpview64.exe"
-	Start-Sleep(500)
+	Start-Sleep -Milliseconds 500
 
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
 	if ($runWinpeas -eq ("y" -or "Y")) {
@@ -391,14 +391,14 @@ function  RemoveTools {
 
         # uninstall python3.11
         Write-Host "[+] Python will open and you need to click to uninstall it"
-        Start-Sleep (2000)
-        }
+        Start-Sleep -Milliseconds 2000
+
         Invoke-Expression -Command "$toolsPath\python3.11.exe" 
-        Start-Sleep (2000)
+        Start-Sleep -Milliseconds 2000
 
         # uninstall malwarebytes
         Write-Host "[+] Malwarebytes will be uninstalled next, follow the the prompts"
-        Start-Sleep (2000)
+        Start-Sleep -Milliseconds 2000
         Invoke-Expression -Command "C:\'Program Files'\Malwarebytes\Anti-Malware\mb4uns.exe"
 
     }else {
@@ -412,6 +412,8 @@ function  RemoveTools {
         Write-Host "[+] Moving malwarebytes..."
         Move-Item -Path "$toolSPath\mb.exe" -Destination "C:\Users\$curUsr\Desktop\"
         Write-Host "[+] Malwarebytes moved" 
+
+    }
 
     # remove the directory with all of the installed tools in it
 	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
@@ -957,7 +959,9 @@ function Main {
                     
                     continue;
                     # TODO finish fun
-                    # Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -Verb RunAsUser 
+                    # need to give Wonk the user
+                    # Invoke-Expression -Command Wonk.ps1 
+                    Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -Verb RunAs
                      
                 }
                 
