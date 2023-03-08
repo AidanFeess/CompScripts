@@ -105,6 +105,7 @@ function ToolStart {
         # run winpeas in the terminal
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
 		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
+        Invoke-Command $wp
 
 		# execute the parsers to convert to pdf
 		$installPython = Read-Host -Prompt "Would you like to install Python?"
