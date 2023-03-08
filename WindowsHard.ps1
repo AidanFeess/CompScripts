@@ -2,9 +2,9 @@ Import-Module Defender
 Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
-Import-Module Microsoft.PowerShell.Core
-Import-Module Microsoft.PowerShell.LocalAccounts
-Import-Module Microsoft.PowerShell.Utility
+#Import-Module Microsoft.PowerShell.Core
+#Import-Module Microsoft.PowerShell.LocalAccounts
+#Import-Module Microsoft.PowerShell.Utility
 Import-Module ScheduledTasks
 
 # install the list of tools
@@ -433,6 +433,7 @@ function Discovery {
 		$curUsr,	
         $mode
 	)
+    l
 
     $discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
 
@@ -446,13 +447,18 @@ function Discovery {
             Write-Output "[-] Error in trying to remove the discovery dump" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
         
         }
+    }
 
-    } else { 
+    if ($mode -eq "y") { 
 
         Write-Host "[+] running discovery dump..."
         Write-Host "[+] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED"
-
-        New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
+        if (Test-Path -Path "C:\Users\$curUsr\Desktop\Discovery") {
+	    	continue;
+    	}else{
+	
+            New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
+        }
 
         # -- prints the results of data dumps into a nicely formatted table for saving --
 
@@ -469,10 +475,11 @@ function Discovery {
         Get-ScheduledTask -Verbose | Format-Table -AutoSize > "$discoverypath\scheduledtasks.txt"
 
         Write-Host "[+] gathering any startup apps..."
-        wmic startup list full | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
+        Get-StartApps | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
 
         Write-Host "[+] data dumped to 'Discovery' folder on your desktop"
     
+        Write-Host "[+] You should still be using other tools because this won't catch everything"
     }
 }
 
@@ -893,13 +900,15 @@ function Main {
 	Start-Sleep -Milliseconds 500
 	Write-Host "[+] control will allow the user to make changes to windows without having to navigate around"
 	Start-Sleep -Milliseconds 500
-    Write-Host "[+] if any errors are made, a message will be printed to the console and stored into \Desktop\Tools\ErrLog.txt"
+    Write-Host "[+] If any errors are made, a message will be printed to the console and stored into \Desktop\Tools\ErrLog.txt"
 
 	$usermode = Read-Host -Prompt "(Harden) or (Control)"
-	if ($usermode -eq ("harden" -or "Harden")) {
-        $mode = "Harden";
-        Harden($curUsr, $toolsPath, $mode)
-    } else {
+	if ($usermode -eq ("Harden")) {
+		$mode = "Harden";
+		Harden($curUsr, $toolsPath, $mode)
+    } 
+
+    if ($usermode -eq ("Control"))  {
 
         while($true) {
             Write-Host "[+] what would you like to do
@@ -951,8 +960,8 @@ function Main {
                 
                 "7" {
 
-                    Write-Host "Do you want to perform a dump (y) or (n), 
-                    WARNING (n) will remove the dump"
+                    Write-Host "Do you want to perform a dump (y) or (undo), 
+                    WARNING (undo) will remove the dump"
 
                     $mode = Read-Host -Prompt "What mode?"
                     
@@ -1011,7 +1020,7 @@ function Main {
                 }
                 
 
-                "quit" {break}
+                "quit" {return}
 
 
                 default {continue}
