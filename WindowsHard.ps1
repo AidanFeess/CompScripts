@@ -17,7 +17,7 @@ function InstallTools {
 	Write-Host "[+] installing tools..."
 
 	# create a folder in the user directory
-	New-Item -Path "C:\Users\$curUsr\Desktop" -Name Tools -type Directory
+	New-Item -Path "$curUsr\Desktop" -Name Tools -type Directory
 	
 	# -- Download the specific tools instead of downloading the entire suite --
 	
@@ -27,7 +27,7 @@ function InstallTools {
 
     if ($DownTCP) {
         
-        Write-Output "[-] Error in downloading TCPView, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in downloading TCPView, make sure you have internet access" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -36,7 +36,7 @@ function InstallTools {
 
     if ($UNZTCP) {
         
-        Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -46,7 +46,7 @@ function InstallTools {
 
     if ($DownProcmon) {
         
-        Write-Output "[-] Error in downloading Procmon, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in downloading Procmon, make sure you have internet access" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -55,7 +55,7 @@ function InstallTools {
 
     if ($UNZPROC) {
         
-        Write-Output "[-] Error in unziping Procmon, make sure it was downloaded" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in unziping Procmon, make sure it was downloaded" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -65,7 +65,7 @@ function InstallTools {
 
     if ($DownAutoruns) {
         
-        Write-Output "[-] Error in downloading Autoruns, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in downloading Autoruns, make sure you have internet access" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -74,7 +74,7 @@ function InstallTools {
 
     if ($UNZAuto) {
         
-        Write-Output "[-] Error in unziping Autoruns, make sure it was downloaded" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in unziping Autoruns, make sure it was downloaded" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -118,7 +118,7 @@ function ToolStart {
 
             if ($DownPYTHON) {
                 
-                Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
             }
 
@@ -137,7 +137,7 @@ function ToolStart {
 
             if ($DownJSONPARSE) {
         
-                Write-Output "[-] Error in downloading json peas parser, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in downloading json peas parser, make sure you have internet access" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
             }
             
@@ -146,7 +146,7 @@ function ToolStart {
 
             if ($DownPDFPARSE) {
         
-                Write-Output "[-] Error in downloading pdf peas parser, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in downloading pdf peas parser, make sure you have internet access" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
             }
 
@@ -209,7 +209,7 @@ function WinUP {
 
     if ($INSPSudpate) {
         
-        Write-Output "[-] Error in installing PSUpdate" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in installing PSUpdate" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
     }else{
 
@@ -331,7 +331,7 @@ function EditFirewallRule {
     
     if ($EditRule) {
 
-        Write-Output "[-] Error in editing firewall rule" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt" -InputObject $errStr
+        Write-Output "[-] Error in editing firewall rule" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt" -InputObject $errStr
 
     }
 
@@ -350,7 +350,7 @@ function ChangeCreds {
 	
     if ($FailUsername) {
 
-        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
         Write-Host "Run step 11 on the hardening checklist"
 
@@ -367,13 +367,13 @@ function ChangeCreds {
 	
     if ($FailPasswd) {
         
-        Write-Output "[-] Error in changing the password" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in changing the password" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
         Write-Host "Run step 9 on the hardening checklist"
 
     }else{
 
-        Write-Host "[+] changed password for $curUsr"
+        Write-Host "[+] changed password for ($env::Username)"
         Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
     
     }
@@ -406,12 +406,12 @@ function  RemoveTools {
         
         # move over the python3.11
         Write-Host "[+] Moving python3.11..."
-        Move-Item -Path "$toolsPath\python3.11.exe" -Destination "C:\Users\$curUsr\Desktop\" -ErrorVariable $MOVPYTH -ErrorAction Continue
+        Move-Item -Path "$toolsPath\python3.11.exe" -Destination "$curUsr\Desktop\" -ErrorVariable $MOVPYTH -ErrorAction Continue
         Write-Host "[+] Python moved"
 
         # move over the malwarebytes just in case
         Write-Host "[+] Moving malwarebytes..."
-        Move-Item -Path "$toolSPath\mb.exe" -Destination "C:\Users\$curUsr\Desktop\"
+        Move-Item -Path "$toolSPath\mb.exe" -Destination "$curUsr\Desktop\"
         Write-Host "[+] Malwarebytes moved" 
 
     }
@@ -421,7 +421,7 @@ function  RemoveTools {
     
     if ($RmTools) {
         
-        Write-Output "[-] Error in trying to remove the Tools directory" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+        Write-Output "[-] Error in trying to remove the Tools directory" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
          
     }
 
@@ -435,7 +435,7 @@ function Discovery {
 	)
     l
 
-    $discoverypath = "C:\Users\$curUsr\Desktop\Discovery"
+    $discoverypath = "$curUsr\Desktop\Discovery"
 
     # note in this case removing the dump is = "undoing it"
     if ($mode -eq "undo") {
@@ -444,7 +444,7 @@ function Discovery {
 
         if ($RmDiscovery) {
 
-            Write-Output "[-] Error in trying to remove the discovery dump" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+            Write-Output "[-] Error in trying to remove the discovery dump" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
         
         }
     }
@@ -453,11 +453,11 @@ function Discovery {
 
         Write-Host "[+] running discovery dump..."
         Write-Host "[+] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED"
-        if (Test-Path -Path "C:\Users\$curUsr\Desktop\Discovery") {
+        if (Test-Path -Path "$curUsr\Desktop\Discovery") {
 	    	continue;
     	}else{
 	
-            New-Item -Path "C:\Users\$curUsr\Desktop" -Name Discovery -type Directory
+            New-Item -Path "$curUsr\Desktop" -Name Discovery -type Directory
         }
 
         # -- prints the results of data dumps into a nicely formatted table for saving --
@@ -568,7 +568,7 @@ function EnableDefenderOn {
             if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $true) {
                 Write-Host "Windows Defender Enabled"
             }else{
-                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
             }
         }elseif (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
 
@@ -587,7 +587,7 @@ function EnableDefenderOn {
             if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
                 Write-Host "Windows Defender Disabled"
             }else{
-                Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
             }
         }
     }
@@ -602,11 +602,11 @@ function Harden {
     )
         
         # check if the Tools folder is already created
-	    if (Test-Path -Path "C:\Users\$curUsr\Desktop\Tools" -eq True) {
+	    if (Test-Path -Path "$curUsr\Desktop\Tools" -eq True) {
 
 		    Write-Host "[+] checking to see if the tools are installed..."
 		    
-            if (Get-ChildItem -Path "C:\Users\$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
+            if (Get-ChildItem -Path "$curUsr\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
 
 			    InstallTools ($toolsPath)
 		    
@@ -618,7 +618,7 @@ function Harden {
 		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$toolsPath\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
         if ($DOWNMB) {
         
-            Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+            Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
         }
 
@@ -708,7 +708,7 @@ function Harden {
 
         if ($SETPOW) {
             
-            Write-Output "[-] Error in changing the execution policy to restricted" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+            Write-Output "[-] Error in changing the execution policy to restricted" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
         
         }else{
     	
@@ -725,7 +725,7 @@ function Harden {
             
             if ($PSRREMOTE) {
 
-                Write-Output "[-] Error in disabling WinRm" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in disabling WinRm" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
             }else{
 
@@ -830,7 +830,7 @@ function Undo {
 
             if ($SETPOW) {
                 
-                Write-Output "[-] Error in changing the execution policy to Undefined" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in changing the execution policy to Undefined" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
             
             }else{
             
@@ -853,7 +853,7 @@ function Undo {
                 
                 if ($PSRREMOTE) {
 
-                    Write-Output "[-] Error in enabling WinRm" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
+                    Write-Output "[-] Error in enabling WinRm" | Out-File -FilePath "$curUsr\Desktop\ErrLog.txt"
 
                 }else{
 
@@ -891,8 +891,8 @@ function Main {
         Write-Host "Hope You Have a Good Day!!!"
     }
 
-	$curUsr = [Environment]::UserName
-	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
+	$curUsr = $env:USERPATH
+	$toolsPath = "$curUsr\Desktop\Tools"
 
 	Write-Host "[+] choose a mode to run the script"
 	Start-Sleep -Milliseconds 500
