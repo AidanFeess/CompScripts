@@ -27,7 +27,7 @@ function InstallTools {
 
     if ($DownTCP) {
         
-        Write-Output "[-] Error in downloading TCPView, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in downloading TCPView, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -36,7 +36,7 @@ function InstallTools {
 
     if ($UNZTCP) {
         
-        Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -46,7 +46,7 @@ function InstallTools {
 
     if ($DownProcmon) {
         
-        Write-Output "[-] Error in downloading Procmon, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in downloading Procmon, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -55,7 +55,7 @@ function InstallTools {
 
     if ($UNZPROC) {
         
-        Write-Output "[-] Error in unziping Procmon, make sure it was downloaded" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in unziping Procmon, make sure it was downloaded" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -65,7 +65,7 @@ function InstallTools {
 
     if ($DownAutoruns) {
         
-        Write-Output "[-] Error in downloading Autoruns, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in downloading Autoruns, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -74,7 +74,7 @@ function InstallTools {
 
     if ($UNZAuto) {
         
-        Write-Output "[-] Error in unziping Autoruns, make sure it was downloaded" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in unziping Autoruns, make sure it was downloaded" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
     }
 	
@@ -102,7 +102,7 @@ function ToolStart {
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
 	if ($runWinpeas -eq ("y" -or "Y")) {
 		
-        # run winpeas in the terminal
+        # run winpeas in the memory
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
 		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
         Invoke-Command $wp
@@ -118,7 +118,7 @@ function ToolStart {
 
             if ($DownPYTHON) {
                 
-                Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
             }
 
@@ -137,7 +137,7 @@ function ToolStart {
 
             if ($DownJSONPARSE) {
         
-                Write-Output "[-] Error in downloading json peas parser, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                Write-Output "[-] Error in downloading json peas parser, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
             }
             
@@ -146,7 +146,7 @@ function ToolStart {
 
             if ($DownPDFPARSE) {
         
-                Write-Output "[-] Error in downloading pdf peas parser, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                Write-Output "[-] Error in downloading pdf peas parser, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
             }
 
@@ -209,7 +209,7 @@ function WinUP {
 
     if ($INSPSudpate) {
         
-        Write-Output "[-] Error in installing PSUpdate" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in installing PSUpdate" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
     }else{
 
@@ -331,7 +331,7 @@ function EditFirewallRule {
     
     if ($EditRule) {
 
-        Write-Output "[-] Error in editing firewall rule" | Out-File -FilePath "$toolsPath\ErrLog.txt" -InputObject $errStr
+        Write-Output "[-] Error in editing firewall rule" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt" -InputObject $errStr
 
     }
 
@@ -350,7 +350,7 @@ function ChangeCreds {
 	
     if ($FailUsername) {
 
-        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
         Write-Host "Run step 11 on the hardening checklist"
 
@@ -367,7 +367,7 @@ function ChangeCreds {
 	
     if ($FailPasswd) {
         
-        Write-Output "[-] Error in changing the password" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in changing the password" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
         Write-Host "Run step 9 on the hardening checklist"
 
@@ -421,7 +421,7 @@ function  RemoveTools {
     
     if ($RmTools) {
         
-        Write-Output "[-] Error in trying to remove the Tools directory" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+        Write-Output "[-] Error in trying to remove the Tools directory" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
          
     }
 
@@ -443,7 +443,7 @@ function Discovery {
 
         if ($RmDiscovery) {
 
-            Write-Output "[-] Error in trying to remove the discovery dump" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+            Write-Output "[-] Error in trying to remove the discovery dump" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
         
         }
 
@@ -561,7 +561,7 @@ function EnableDefenderOn {
             if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $true) {
                 Write-Host "Windows Defender Enabled"
             }else{
-                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
             }
         }elseif (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
 
@@ -580,7 +580,7 @@ function EnableDefenderOn {
             if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
                 Write-Host "Windows Defender Disabled"
             }else{
-                Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
             }
         }
     }
@@ -611,7 +611,7 @@ function Harden {
 		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$toolsPath\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
         if ($DOWNMB) {
         
-            Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+            Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
         }
 
@@ -701,7 +701,7 @@ function Harden {
 
         if ($SETPOW) {
             
-            Write-Output "[-] Error in changing the execution policy to restricted" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+            Write-Output "[-] Error in changing the execution policy to restricted" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
         
         }else{
     	
@@ -718,7 +718,7 @@ function Harden {
             
             if ($PSRREMOTE) {
 
-                Write-Output "[-] Error in disabling WinRm" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                Write-Output "[-] Error in disabling WinRm" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
             }else{
 
@@ -823,7 +823,7 @@ function Undo {
 
             if ($SETPOW) {
                 
-                Write-Output "[-] Error in changing the execution policy to Undefined" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                Write-Output "[-] Error in changing the execution policy to Undefined" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
             
             }else{
             
@@ -846,7 +846,7 @@ function Undo {
                 
                 if ($PSRREMOTE) {
 
-                    Write-Output "[-] Error in enabling WinRm" | Out-File -FilePath "$toolsPath\ErrLog.txt"
+                    Write-Output "[-] Error in enabling WinRm" | Out-File -FilePath "C:\Users\$curUsr\Desktop\ErrLog.txt"
 
                 }else{
 
@@ -870,6 +870,20 @@ function Main {
 
     )
 
+    # should stop redteam from just running the script
+    $id = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+
+    $p = New-Object System.Security.Principal.WindowsPrincipal($id)
+
+    if ($p.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) { 
+        Write-Host "Welcome to WindowsHard!"
+        Write-Host "Goodluck Today!!!"
+    
+    }else{ 
+        Write-Host "No Red Team Allowed!!!"
+        Write-Host "Hope You Have a Good Day!!!"
+    }
+
 	$curUsr = [Environment]::UserName
 	$toolsPath = "C:\Users\$curUsr\Desktop\Tools"
 
@@ -890,7 +904,7 @@ function Main {
         while($true) {
             Write-Host "[+] what would you like to do
             - edit a firewall rule(1)
-            - change a group policy(2)(TODO)
+            - change a group policy(2) (TODO)
             - Change Password(3)
             - Install Tools(4)
             - Start Tools(5)
@@ -898,7 +912,8 @@ function Main {
             - Discovery(7)
             - DefenderScan(8)
             - Undo(9)
-            - Start Wonk(???)
+            - OSK Spawn(10)
+            - Start Wonk(Wonk)(???)
             - quit
             "
             
@@ -950,25 +965,55 @@ function Main {
 
                 "9" {
                     
-                    Write-Host "Remember that functions already exist that can undo"
+                    Write-Host "Remember that functions already exist that can undo like RemoveTools"
 
                     Undo
 
                 }
 
+
                 "10" {
                     
                     continue;
                     # TODO finish fun
-                    # need to give Wonk the user
-                    # Invoke-Expression -Command Wonk.ps1 
-                    Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -Verb RunAs
+
+                    $punUser = Read-Host -Prompt "What user do you want to punish?"
+                    while ($true) {
+                        Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $punUser
+                        Start-Sleep (5)
+                    }
                      
                 }
+
+
+                "Wonk" {
+                    
+                    # Wonks a selected session that is seen as the operator as not being legit
+                    $to_Wonk_or_Not_to_Wonk = Read-Host -Prompt "Are you sure you want to Wonk?"
+
+                    if ($to_Wonk_or_Not_to_Wonk -eq ("y" -or "Y")) {
+                        $wonkable = Get-NetTCPConnection -Verbose | Select-Object -Property LocalPort, RemotePort, OwningProcess
+
+                        foreach ($x in $wonkable) {
+                            if ($x.LocalPort -eq (22 -or 5900 -or 3389)) {
+                                Write-Host "$x.LocalPort $x.RemoteAddress $x.OwningProcess"
+                            }
+                        }
+
+                        # note the TM is a joke
+                        $bewonked = Read-Host -Prompt "What process do you want to (*PRE*)Wonk(TM)"
+
+                        # Wonks the target
+                        Stop-Process $bewonked
+
+                        Write-Host "[+] Session has been (*PRE*)Wonked"
+                    }
+                }
                 
+
                 "quit" {break}
 
-                
+
                 default {continue}
             } 
         }
