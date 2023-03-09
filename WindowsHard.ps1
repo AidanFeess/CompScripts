@@ -10,7 +10,7 @@ Import-Module ScheduledTasks
 # install the list of tools
 function InstallTools {
 	param (
-		$toolsPath,
+		$toolsPath
 	)
 
 	Write-Host "[+] installing tools..."
@@ -379,7 +379,7 @@ function ChangeCreds {
 
 function  RemoveTools {
 	param (
-		$toolsPath,
+		$toolsPath
 	)
 
 	Write-Host "[+] Removing the tools directory..."
@@ -731,7 +731,7 @@ function Harden {
 
 
 		# change the password/username of the current admin
-		ChangeCreds()
+		ChangeCreds
 		
 
 		# setup UAC
@@ -939,7 +939,7 @@ function Main {
                     # TODO populate this with stuff after group policy is added
                 }
 
-                "3" {ChangeCreds()}
+                "3" {ChangeCreds}
 
                 
                 "4" {InstallTools($toolsPath)}
