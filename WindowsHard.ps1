@@ -84,13 +84,13 @@ function ToolStart {
 	Write-Host "[+] opening tools..."
 
 	# open autoruns, procmon, TCPView
-	Invoke-Expresision -Command "$env:USERPROFILE\Desktop\Tools\Procmon\Procmon64.exe"
+	Invoke-Expression "$env:USERPROFILE\Desktop\Tools\Procmon\Procmon64.exe"
 	Start-Sleep -Milliseconds 500
 	
-    Invoke-Expresision -Command "$env:USERPROFILE\Desktop\Tools\Autoruns\Autoruns64.exe"
+    Invoke-Expression "$env:USERPROFILE\Desktop\Tools\Autoruns\Autoruns64.exe"
 	Start-Sleep -Milliseconds 500
 	
-    Invoke-Expresision -Comand "$env:USERPROFILE\Desktop\Tools\TCPView\tcpview64.exe"
+    Invoke-Expression "$env:USERPROFILE\Desktop\Tools\TCPView\tcpview64.exe"
 	Start-Sleep -Milliseconds 500
 
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
