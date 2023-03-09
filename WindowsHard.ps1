@@ -2,9 +2,6 @@ Import-Module Defender
 Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
-#Import-Module Microsoft.PowerShell.Core
-#Import-Module Microsoft.PowerShell.LocalAccounts
-#Import-Module Microsoft.PowerShell.Utility
 Import-Module ScheduledTasks
 
 # install the list of tools
@@ -97,7 +94,7 @@ function ToolStart {
 	Start-Sleep -Milliseconds 500
 
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
-	if ($runWinpeas -eq ("y" -or "Y")) {
+	if ($runWinpeas -eq ("y")) {
 		
         # run winpeas in the memory
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
@@ -106,7 +103,7 @@ function ToolStart {
 
 		# execute the parsers to convert to pdf
 		$installPython = Read-Host -Prompt "Would you like to install Python?"
-		if ($installPython -eq ("y" -or "Y")) {
+		if ($installPython -eq ("y")) {
 		
         	Write-Host "[+] WARNING this can leave your system vulnerable" 
 			Write-Host "[+] Consider removing these items after use if they aren't going to be controlled" 
@@ -231,7 +228,7 @@ function WinFire {
 	Write-Host "[+] hardening firewall with $mode..."
 
 	# turn defaults on and set logging
-	Set-NetFirewallProfile -Profile Dowmain, Public,Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
+	Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogAllowed True -LogIgnored True -LogBlocked True -LogMaxSize 4096 -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
 	# get the current listening conections ports
 	$a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen -ErrorAction Continue
@@ -252,7 +249,7 @@ function WinFire {
 
 			$response = Read-Host -Prompt "Do you want to block ssh?"
 
-			if ($response -eq ("y" -or "Y")) {
+			if ($response -eq ("y")) {
 			
                	$a[$x].Remove	
 				Write-Host "[+] ssh(22) blocked"
@@ -268,7 +265,7 @@ function WinFire {
 	
     		$response = Read-Host -Prompt "Do you want to block vnc?"
 
-			if ($response -eq "y" -or "Y") {
+			if ($response -eq "y") {
 	
     			$a[$x].Remove
     			Write-Host "[+] vnc(5900) blocked"
@@ -284,7 +281,7 @@ function WinFire {
 	
     		$response = Read-Host -Prompt "Do you want to block rdp?"
 
-			if ($response -eq "y" -or "Y") {
+			if ($response -eq "y") {
 	
     			$a[$x].Remove
 	
@@ -340,23 +337,8 @@ function ChangeCreds {
 	param (
 	)
 
-	Write-Host "[+] You are about to change the username of the current admin"
-	$newUsername = Read-Host -Prompt "What is the new name?"
-	Rename-LocalUser -Name "$env:Username" -NewName "$newUsername" -ErrorVariable $FailUsername -ErrorAction Continue
-	
-    if ($FailUsername) {
-
-        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-        Write-Host "Run step 11 on the hardening checklist"
-
-    }else{
-
-        Write-Host "[+] New username set"
-    
-    }
-
-	Write-Host "[+] You are now about to change your password"
+    # password has to be changed first because it needs the username to change it
+    Write-Host "[+] You are now about to change your password"
 
 	$Password = Read-Host "Enter the new password" -AsSecureString
 	Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorVariable $FailPasswd -ErrorAction Continue
@@ -373,6 +355,24 @@ function ChangeCreds {
         Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
     
     }
+
+	Write-Host "[+] You are about to change the username of the current admin"
+	$newUsername = Read-Host -Prompt "What is the new name?"
+	Rename-LocalUser -Name "$env:Username" -NewName "$newUsername" -ErrorVariable $FailUsername -ErrorAction Continue
+	
+    if ($FailUsername) {
+
+        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+
+        Write-Host "Run step 11 on the hardening checklist"
+
+    }else{
+
+        Write-Host "[+] New username set"
+    
+    }
+
+	
 }
 
 function  RemoveTools {
@@ -382,7 +382,7 @@ function  RemoveTools {
 	Write-Host "[+] Removing the tools directory..."
 
     $remInstTools = Read-Host -Prompt "Do you want to also remove python3 and malwarebytes (y) or (n)"    
-    if ($remInstTools -eq ("y" -or "Y")) {
+    if ($remInstTools -eq ("y")) {
 
         # uninstall python3.11
         Write-Host "[+] Python will open and you need to click to uninstall it"
@@ -544,7 +544,7 @@ function EnableDefenderOn {
         $turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y) or (undo)"
         # TODO need to test
     
-        if ($turnDefenderOn -eq ("y" -or "Y")) {
+        if ($turnDefenderOn -eq ("y")) {
         
             Write-Host "Enabling Windows Defender..."
 
@@ -663,7 +663,7 @@ function Harden {
 
 		# harden the firewall for remote or lan comps
 		$winFirewallOn = Read-Host -Prompt "Do you want to turn on the windows firewall (y)"
-		if ($winFirewallOn -eq ("y" -or "Y")) {
+		if ($winFirewallOn -eq ("y")) {
 			
 			WinFire ($mode, $step)
 		
@@ -671,7 +671,7 @@ function Harden {
 
 
 		$hardenExch = Read-Host -Prompt "Do you want to Harden Exchange (y)"
-		if ($hardenExch -eq ("y" -or "Y")) {
+		if ($hardenExch -eq ("y")) {
             
             # looks for services that have "Exchange"
             # seems to be the naming convention
@@ -710,7 +710,7 @@ function Harden {
 
     	# disable WinRM
 		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
-    	if ($disableWinRm -eq ("y" -or "Y")) {
+    	if ($disableWinRm -eq ("y")) {
 	   
     		Disable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE 
             
@@ -760,7 +760,7 @@ function Harden {
         # update windows if it is in the scope of the rules
 		$updates = Read-Host -Prompt "Do you want to update (y)"
 		
-        if ($updates -eq ("y" -or "Y")) {
+        if ($updates -eq ("y")) {
 			WinUP
 		}
 
@@ -836,7 +836,7 @@ function Undo {
             # enable WinRM
             $enableWinRm = Read-Host -Prompt "enable WinRm? (y) or (n), WARNING his will make your machine vulnerable to RCE"
         
-            if ($enableWinRm -eq ("y" -or "Y")) {
+            if ($enableWinRm -eq ("y")) {
            
                 Enable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE -Confirm
                 
@@ -987,7 +987,7 @@ function Main {
                     # Wonks a selected session that is seen as the operator as not being legit
                     $to_Wonk_or_Not_to_Wonk = Read-Host -Prompt "Are you sure you want to Wonk?"
 
-                    if ($to_Wonk_or_Not_to_Wonk -eq ("y" -or "Y")) {
+                    if ($to_Wonk_or_Not_to_Wonk -eq ("y")) {
                         $wonkable = Get-NetTCPConnection -Verbose | Select-Object -Property LocalPort, RemotePort, OwningProcess
 
                         foreach ($x in $wonkable) {
