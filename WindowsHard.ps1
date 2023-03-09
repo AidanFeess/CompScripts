@@ -99,7 +99,6 @@ function ToolStart {
         # run winpeas in the memory
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
 		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
-        Invoke-Command $wp
 
 		# execute the parsers to convert to pdf
 		$installPython = Read-Host -Prompt "Would you like to install Python?"
@@ -108,7 +107,7 @@ function ToolStart {
         	Write-Host "[+] WARNING this can leave your system vulnerable" 
 			Write-Host "[+] Consider removing these items after use if they aren't going to be controlled" 
 
-			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$env:USERPROFILE\Desktop\Tools\python3.exe' -ErrorAction Continue -ErrorVariable $DownPYTHON
+			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile "$env:USERPROFILE\Desktop\Tools\python3.exe" -ErrorAction Continue -ErrorVariable $DownPYTHON
 
             if ($DownPYTHON) {
                 
@@ -991,7 +990,15 @@ function Main {
                         $wonkable = Get-NetTCPConnection -Verbose | Select-Object -Property LocalPort, RemotePort, OwningProcess
 
                         foreach ($x in $wonkable) {
-                            if ($x.LocalPort -eq (22 -or 5900 -or 3389)) {
+                            if ($x.LocalPort -eq (22)) {
+                                Write-Host "$x.LocalPort $x.RemoteAddress $x.OwningProcess"
+                            }
+
+                            if ($x.LocalPort -eq (3389)) {
+                                Write-Host "$x.LocalPort $x.RemoteAddress $x.OwningProcess"
+                            }
+
+                            if ($x.LocalPort -eq (5900)) {
                                 Write-Host "$x.LocalPort $x.RemoteAddress $x.OwningProcess"
                             }
                         }
