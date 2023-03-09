@@ -10,19 +10,18 @@ Import-Module ScheduledTasks
 # install the list of tools
 function InstallTools {
 	param (
-		$toolsPath
 	)
 
 	Write-Host "[+] installing tools..."
 
 	# create a folder in the user directory
-	New-Item -Path "$env:USERPROFILE\Desktop" -Name Tools -type Directory
+	New-Item -Path "$env:USERPROFILE\Desktop\" -Name Tools -type Directory
 	
 	# -- Download the specific tools instead of downloading the entire suite --
 	
 	# TCPView
 	$TCPViewUrl = "https://download.sysinternals.com/files/TCPView.zip"	
-	Invoke-WebRequest $TCPViewUrl -OutFile "$toolsPath\TCPView.zip" -ErrorAction Continue -ErrorVariable $DownTCP
+	Invoke-WebRequest $TCPViewUrl -OutFile "$env:USERPROFILE\Desktop\Tools\TCPView.zip" -ErrorAction Continue -ErrorVariable $DownTCP
 
     if ($DownTCP) {
         
@@ -30,8 +29,8 @@ function InstallTools {
 
     }
 	
-    $zipPath = "$toolsPath\TCPView.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\TCPView" -ErrorAction Continue -ErrorVariable $UNZTCP
+    $zipPath = "$env:USERPROFILE\Desktop\Tools\TCPView.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$env:USERPROFILE\Desktop\Tools\TCPView" -ErrorAction Continue -ErrorVariable $UNZTCP
 
     if ($UNZTCP) {
         
@@ -41,7 +40,7 @@ function InstallTools {
 	
 	# Procmon
 	$ProcmonUrl = "https://download.sysinternals.com/files/ProcessMonitor.zip"	
-	Invoke-WebRequest "$ProcmonUrl" -OutFile "$toolsPath\ProcessMonitor.zip" -ErrorAction Continue -ErrorVariable $DownProcmon
+	Invoke-WebRequest "$ProcmonUrl" -OutFile "$env:USERPROFILE\Desktop\Tools\ProcessMonitor.zip" -ErrorAction Continue -ErrorVariable $DownProcmon
 
     if ($DownProcmon) {
         
@@ -49,8 +48,8 @@ function InstallTools {
 
     }
 	
-    $zipPath = "$toolsPath\ProcessMonitor.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Procmon" -ErrorAction Continue -ErrorVariable $UNZPROC
+    $zipPath = "$env:USERPROFILE\Desktop\Tools\ProcessMonitor.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$env:USERPROFILE\Desktop\Tools\Procmon" -ErrorAction Continue -ErrorVariable $UNZPROC
 
     if ($UNZPROC) {
         
@@ -60,7 +59,7 @@ function InstallTools {
 	
 	# Autoruns/Autorunsc
 	$AutorunsUrl = "https://download.sysinternals.com/files/Autoruns.zip"	
-	Invoke-WebRequest "$AutorunsUrl" -OutFile "$toolsPath\Autoruns.zip" -ErrorAction Continue -ErrorVariable $DownAutoruns
+	Invoke-WebRequest "$AutorunsUrl" -OutFile "$env:USERPROFILE\Desktop\Tools\Autoruns.zip" -ErrorAction Continue -ErrorVariable $DownAutoruns
 
     if ($DownAutoruns) {
         
@@ -68,8 +67,8 @@ function InstallTools {
 
     }
 	
-    $zipPath = "$toolsPath\Autoruns.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$toolsPath\Autoruns" -ErrorAction Continue -ErrorVariable $UNZAuto
+    $zipPath = "$env:USERPROFILE\Desktop\Tools\Autoruns.zip"
+	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$env:USERPROFILE\Desktop\Tools\Autoruns" -ErrorAction Continue -ErrorVariable $UNZAuto
 
     if ($UNZAuto) {
         
@@ -83,19 +82,18 @@ function InstallTools {
 # once tools are run winpeas and parse the output and save it
 function ToolStart {
 	param (
-		$toolsPath
 	)
 
 	Write-Host "[+] opening tools..."
 
 	# open autoruns, procmon, TCPView
-	Invoke-Expresision -Command "$toolsPath\Procmon\Procmon64.exe"
+	Invoke-Expresision -Command "$env:USERPROFILE\Desktop\Tools\Procmon\Procmon64.exe"
 	Start-Sleep -Milliseconds 500
 	
-    Invoke-Expresision -Command "$toolsPath\Autoruns\Autoruns64.exe"
+    Invoke-Expresision -Command "$env:USERPROFILE\Desktop\Tools\Autoruns\Autoruns64.exe"
 	Start-Sleep -Milliseconds 500
 	
-    Invoke-Expresision -Comand "$toolsPath\TCPView\tcpview64.exe"
+    Invoke-Expresision -Comand "$env:USERPROFILE\Desktop\Tools\TCPView\tcpview64.exe"
 	Start-Sleep -Milliseconds 500
 
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
@@ -113,7 +111,7 @@ function ToolStart {
         	Write-Host "[+] WARNING this can leave your system vulnerable" 
 			Write-Host "[+] Consider removing these items after use if they aren't going to be controlled" 
 
-			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$toolsPath\python3.exe' -ErrorAction Continue -ErrorVariable $DownPYTHON
+			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile '$env:USERPROFILE\Desktop\Tools\python3.exe' -ErrorAction Continue -ErrorVariable $DownPYTHON
 
             if ($DownPYTHON) {
                 
@@ -124,7 +122,7 @@ function ToolStart {
             # still need to manually install
             Write-Host "[+] install python and make sure to add to your path"
 
-            Invoke-Expression -Command "$toolSPath\python3.exe" 
+            Invoke-Expression -Command "$env:USERPROFILE\Desktop\Tools\python3.exe" 
 
             # should refresh the path so that the parsers can be used in the same session
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -132,7 +130,7 @@ function ToolStart {
             # -- download the parsers used for the output --
 		
 			$jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
-			Invoke-WebRequest $jsonUrl -OutFile "$toolsPath\peas2json.py" -ErrorAction Continue -ErrorVariable $DownJSONPARSE
+			Invoke-WebRequest $jsonUrl -OutFile "$env:USERPROFILE\Desktop\Tools\peas2json.py" -ErrorAction Continue -ErrorVariable $DownJSONPARSE
 
             if ($DownJSONPARSE) {
         
@@ -141,7 +139,7 @@ function ToolStart {
             }
             
 			$pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
-			Invoke-WebRequest $pdfUrl -OutFile "$toolsPath\json2pdf.py" -ErrorAction Continue -ErrorVariable $DownPDFPARSE
+			Invoke-WebRequest $pdfUrl -OutFile "$env:USERPROFILE\Desktop\Tools\json2pdf.py" -ErrorAction Continue -ErrorVariable $DownPDFPARSE
 
             if ($DownPDFPARSE) {
         
@@ -152,9 +150,9 @@ function ToolStart {
 		}
 		
         # run the parsers so that it can be viewed easily
-        python3.exe '$toolsPath\peas2json.py $toolsPath\log.out $toolsPath\peas.json'
+        python3.exe '$env:USERPROFILE\Desktop\Tools\peas2json.py $env:USERPROFILE\Desktop\Tools\log.out $env:USERPROFILE\Desktop\Tools\peas.json'
 
-		python3.exe '$toolsPath\json2pdf.py $toolsPath\peas.json $toolsPath\peas.pdf'
+		python3.exe '$env:USERPROFILE\Desktop\Tools\json2pdf.py $env:USERPROFILE\Desktop\Tools\peas.json $env:USERPROFILE\Desktop\Tools\peas.pdf'
     
         # open the pdf for viewing
         Start-Process ((Resolve-Path "C:\..\peas.pdf").Path)
@@ -321,7 +319,7 @@ function WinFire {
 # open/close the ports that are requested
 function EditFirewallRule {
 	param (
-		$portNum, $action, $direction, $protocol, $toolsPath, $status
+		$portNum, $action, $direction, $protocol, $status
 	)
 
 	Write-Host "[+] editing firewall rule..."
@@ -379,7 +377,6 @@ function ChangeCreds {
 
 function  RemoveTools {
 	param (
-		$toolsPath
 	)
 
 	Write-Host "[+] Removing the tools directory..."
@@ -391,7 +388,7 @@ function  RemoveTools {
         Write-Host "[+] Python will open and you need to click to uninstall it"
         Start-Sleep -Milliseconds 2000
 
-        Invoke-Expression -Command "$toolsPath\python3.11.exe" 
+        Invoke-Expression -Command "$env:USERPROFILE\Desktop\Tools\python3.11.exe" 
         Start-Sleep -Milliseconds 2000
 
         # uninstall malwarebytes
@@ -403,18 +400,18 @@ function  RemoveTools {
         
         # move over the python3.11
         Write-Host "[+] Moving python3.11..."
-        Move-Item -Path "$toolsPath\python3.11.exe" -Destination "$env:USERPROFILE\Desktop\" -ErrorVariable $MOVPYTH -ErrorAction Continue
+        Move-Item -Path "$env:USERPROFILE\Desktop\Tools\python3.11.exe" -Destination "$env:USERPROFILE\Desktop\" -ErrorVariable $MOVPYTH -ErrorAction Continue
         Write-Host "[+] Python moved"
 
         # move over the malwarebytes just in case
         Write-Host "[+] Moving malwarebytes..."
-        Move-Item -Path "$toolSPath\mb.exe" -Destination "$env:USERPROFILE\Desktop\"
+        Move-Item -Path "$env:USERPROFILE\Desktop\Tools\mb.exe" -Destination "$env:USERPROFILE\Desktop\"
         Write-Host "[+] Malwarebytes moved" 
 
     }
 
     # remove the directory with all of the installed tools in it
-	Remove-Item -LiteralPath "$toolsPath" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
+	Remove-Item -LiteralPath "$env:USERPROFILE\Desktop\Tools" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
     
     if ($RmTools) {
         
@@ -592,7 +589,6 @@ function EnableDefenderOn {
 
 function Harden {
     param (
-       $toolsPath,
        $mode
     )
         
@@ -603,14 +599,14 @@ function Harden {
 		    
         #     if (Get-ChildItem -Path "$env:USERPROFILE\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
 
-		InstallTools ($toolsPath)
+		InstallTools
 		    
         #     }
 	    # }
 
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
-		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$toolsPath\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
+		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
         if ($DOWNMB) {
         
             Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
@@ -619,7 +615,7 @@ function Harden {
 
 		# Run Malwarebytes
 		Write-Host "[+] click to install the software"
-		Invoke-Expression "$toolsPath\mb.exe"
+		Invoke-Expression "$env:USERPROFILE\Desktop\Tools\mb.exe"
 
 		Start-Sleep -Milliseconds 1000
 		
@@ -692,7 +688,7 @@ function Harden {
         EnableDefenderOn($mode, $step)
 		
 		# start all the installed tools to find any possible weird things running
-		ToolStart($toolsPath)
+		ToolStart
 
 
 		# change the execution policy for powershell for admins only (works for the current machine)
@@ -772,7 +768,6 @@ function Harden {
 
 function Undo {
     param (
-        $toolsPath
     )
 
         [String]$mode = "undo"
@@ -885,7 +880,6 @@ function Main {
         Write-Host "Hope You Have a Good Day!!!"
     }
 
-	$toolsPath = "$env:USERPROFILE\Desktop\Tools"
 
 	Write-Host "[+] choose a mode to run the script"
 	Start-Sleep -Milliseconds 500
@@ -898,7 +892,7 @@ function Main {
 	$usermode = Read-Host -Prompt "(Harden) or (Control)"
 	if ($usermode -eq ("Harden")) {
 		$mode = "Harden";
-		Harden($toolsPath, $mode)
+		Harden($mode)
     } 
 
     if ($usermode -eq ("Control"))  {
@@ -929,7 +923,7 @@ function Main {
                     [Bool]$status = Read-Host -Prompt "to create the rule use True
                     to undo use false"
                     
-                    EditFirewallRule ($portNum, $action, $direction, $toolsPath, $status)
+                    EditFirewallRule ($portNum, $action, $direction, $status)
                 }
 
                 "2" {
@@ -942,13 +936,13 @@ function Main {
                 "3" {ChangeCreds}
 
                 
-                "4" {InstallTools($toolsPath)}
+                "4" {InstallTools}
 
                 
-                "5" {ToolStart($toolsPath)}
+                "5" {ToolStart}
 
                 
-                "6" {RemoveTools($toolsPath)}
+                "6" {RemoveTools}
 
                 
                 "7" {
