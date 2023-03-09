@@ -334,25 +334,28 @@ function EditFirewallRule {
 # change the password on admin account
 function ChangeCreds {
 	param (
+        $mode
 	)
 
-    # password has to be changed first because it needs the username to change it
-    Write-Host "[+] You are now about to change your password"
+    if ($mode -eq "control") {
+        # password has to be changed first because it needs the username to change it
+        Write-Host "[+] You are now about to change your password"
 
-	$Password = Read-Host "Enter the new password" -AsSecureString
-	Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorVariable $FailPasswd -ErrorAction Continue
-	
-    if ($FailPasswd) {
+        $Password = Read-Host "Enter the new password" -AsSecureString
+        Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorVariable $FailPasswd -ErrorAction Continue
         
-        Write-Output "[-] Error in changing the password" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+        if ($FailPasswd) {
+            
+            Write-Output "[-] Error in changing the password" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
 
-        Write-Host "Run step 9 on the hardening checklist"
+            Write-Host "Run step 9 on the hardening checklist"
 
-    }else{
+        }else{
 
-        Write-Host "[+] changed password for ($env::Username)"
-        Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
-    
+            Write-Host "[+] changed password for ($env::Username)"
+            Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
+        
+        }
     }
 
 	Write-Host "[+] You are about to change the username of the current admin"
@@ -592,16 +595,14 @@ function Harden {
     )
         
         # check if the Tools folder is already created
-	    # if (Test-Path -Path "$env:USERPROFILE\Desktop\Tools") {
+		Write-Host "[+] checking to see if the tools are installed..."
+	    if (Test-Path -Path "$env:USERPROFILE\Desktop\Tools") {
 
-		#     Write-Host "[+] checking to see if the tools are installed..."
-		    
-        #     if (Get-ChildItem -Path "$env:USERPROFILE\Desktop\Tools" -Recurse | Measure-Object -eq 0) {
+        } else {
 
-		InstallTools
-		    
-        #     }
-	    # }
+            InstallTools
+
+	    }
 
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
@@ -726,7 +727,7 @@ function Harden {
 
 
 		# change the password/username of the current admin
-		ChangeCreds
+		ChangeCreds($mode)
 		
 
 		# setup UAC
@@ -912,7 +913,7 @@ function Main {
             - quit
             "
             
-            $choice = Read-Host 
+            $choice = Read-Host -Prompt
             switch ($choice) {
 
                 "1" {
@@ -932,7 +933,10 @@ function Main {
                     # TODO populate this with stuff after group policy is added
                 }
 
-                "3" {ChangeCreds}
+                "3" {
+                    $credsmode = "control"
+                    ChangeCreds($credsmode)
+                }
 
                 
                 "4" {InstallTools}
@@ -949,9 +953,9 @@ function Main {
                     Write-Host "Do you want to perform a dump (y) or (undo), 
                     WARNING (undo) will remove the dump"
 
-                    $mode = Read-Host -Prompt "What mode?"
+                    $disconveryMode = Read-Host -Prompt "What mode?"
                     
-                    Discovery($mode)
+                    Discovery($disconverymodeMode)
                 }
 
                 
@@ -987,19 +991,19 @@ function Main {
                     $to_Wonk_or_Not_to_Wonk = Read-Host -Prompt "Are you sure you want to Wonk?"
 
                     if ($to_Wonk_or_Not_to_Wonk -eq ("y")) {
-                        $wonkable = Get-NetTCPConnection -Verbose | Select-Object -Property LocalPort, RemotePort, OwningProcess
+                        $wonkable = Get-NetTCPConnection -State Established -Verbose | Select-Object -Property LocalPort, RemotePort, OwningProcess
 
                         foreach ($x in $wonkable) {
                             if ($x.LocalPort -eq (22)) {
-                                Write-Host "$x.LocalPort $x.RemoteAddress $x.OwningProcess"
+                                Write-Host "$x"
                             }
 
                             if ($x.LocalPort -eq (3389)) {
-                                Write-Host "$x.LocalPort $x.RemoteAddress $x.OwningProcess"
+                                Write-Host "$x"
                             }
 
                             if ($x.LocalPort -eq (5900)) {
-                                Write-Host "$x.LocalPort $x.RemoteAddress $x.OwningProcess"
+                                Write-Host "$x"
                             }
                         }
 
