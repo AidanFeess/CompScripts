@@ -746,7 +746,7 @@ function Harden {
 		# disable anonymous logins
 		Write-Host "[+] disabling anonymous users..."
 
-		Set-CsAccessEdgeConfiguration -AllowAnonymousUsers $False
+        Set-ItemProperty -Path "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RestrictAnonymous" -Value 1 -PropertyType DWORD -Force
 
 		Write-Host "[+] disabled anonymous users"
 
