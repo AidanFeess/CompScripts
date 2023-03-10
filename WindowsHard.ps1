@@ -232,6 +232,9 @@ function WinFire {
 	# get the current listening conections ports
 	$a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen -ErrorAction Continue
 
+    # create the rule to block all unused ports and activate it later
+    New-NetFirewallRule -DisplayName "block all ports" -Direction Inbound -LocalPort Any -Action Block -Enabled False
+    
     if ($GetListen) {
 
         Write-Output "[-] Error in geting the active list of listening ports" | Out-File -FilePath "toolsPath\ErrOut.txt"
@@ -242,15 +245,22 @@ function WinFire {
 	Write-Host "[+] your options are ( y ) or ( n )"
 
 	# parse the list to remove ports that shouldn't 
-	foreach ($x in $a) {
+	for ($x = 0; $x -lt ($a.Length - 1); $x++) {
 		
+        $portNum = $a[$x].LocalPort
+
+        # uncomment for debug
+        # Write-Host "$portNum"
+
 		if ($x -eq 22) {
 
 			$response = Read-Host -Prompt "Do you want to block ssh?"
 
 			if ($response -eq ("y")) {
 			
-               	$a[$x].Remove	
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+
 				Write-Host "[+] ssh(22) blocked"
 
 			}else{
@@ -266,7 +276,9 @@ function WinFire {
 
 			if ($response -eq "y") {
 	
-    			$a[$x].Remove
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+
     			Write-Host "[+] vnc(5900) blocked"
 
 			}else{
@@ -282,8 +294,9 @@ function WinFire {
 
 			if ($response -eq "y") {
 	
-    			$a[$x].Remove
-	
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+
     			Write-Host "[+] rdp(389) blocked"
 	
     		}else{
@@ -292,23 +305,17 @@ function WinFire {
 	
     		}
 		}
+
+        # allow the port if it was previously listening
+        New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Allow
 	}
 
-	# TODO supposed to allow already existing connections and remove ports that aren't being used
-    if ($mode -eq "Harden") {
-        New-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Direction Inbound -LocalPort $a.LocalPort -Action Allow
-        New-NetFirewallRule -DisplayName "block all ports not in current use" -Direction Inbound -LocalPort Any -Action Block
+    # activate the rule from earlier
+    Set-NetFirewallRule -DisplayName "block all ports" -Protocol tcp -Direction Inbound -LocalPort Any -Action Block -Enabled True
 
-        Write-Host "[+] finished hardening firewall"
-        Write-Host "[+] remember to do a deeper dive later and patch any holes"
+    Write-Host "[+] finished hardening firewall"
+    Write-Host "[+] remember to do a deeper dive later and patch any holes"
 
-    }elseif ($mode = "undo") {
-        Set-NetFirewallRule -DisplayName "allow all ports that are currently listening" -Enabled $false
-        Set-NetFirewallRule -DisplayName "block all ports not in current use" -Enabled $false
-
-        Write-Host "[+] disabled the firewall rules created during hardening"
-        Write-Host "[+] re-enable or edit it manually in Windows Advanced Firewall"
-    }
 }
 
 
@@ -774,21 +781,18 @@ function Undo {
 
         Write-Host "
         - (#) To uninstall all tool installed use RemoveTools in the control menu
-        - (1) winfire
-        - (2) Exchange(TODO)
-        - (3) Windows Defender
-        - (4) Psh Policy
-        - (5) Enable WinRM(why?????)
-        - (6) re-enable netbios(TODO)
+        - (Exchange) Exchange(TODO)
+        - (Defender) Windows Defender
+        - (Psh) Psh Policy
+        - (WinRm) Enable WinRM(why?????)
+        - (netbios) re-enable netbios(TODO)
         "
 
         [Int]$step = Read-Host -Prompt "What step do you want to undo"
 
         switch ($step) {
 
-        "1" { winfire($mode) }
-
-        "2" { 
+        "Exchange" { 
             
             continue;
 
@@ -805,13 +809,13 @@ function Undo {
             }
         }
 
-        "3" {
+        "Defender" {
 
             EnableDefenderOn($mode)
 
         }
 
-        "4" {
+        "Psh" {
 
             Write-Host "[+] changing powershell policy..."
 		
@@ -828,10 +832,7 @@ function Undo {
             }
         }
 
-        "5" {
-
-            # note need to confirm that we want this first 
-            break;
+        "WinRM" {
 
             # enable WinRM
             $enableWinRm = Read-Host -Prompt "enable WinRm? (y) or (n), WARNING his will make your machine vulnerable to RCE"
@@ -853,7 +854,7 @@ function Undo {
 
         }
 
-        "6" { continue }
+        "netbios" { continue }
 
         default { continue }
     }
@@ -953,9 +954,9 @@ function Main {
                     Write-Host "Do you want to perform a dump (y) or (undo), 
                     WARNING (undo) will remove the dump"
 
-                    $disconveryMode = Read-Host -Prompt "What mode?"
+                    $discoveryMode = Read-Host -Prompt "What mode?"
                     
-                    Discovery($disconverymodeMode)
+                    Discovery($discoveryMode)
                 }
 
                 
