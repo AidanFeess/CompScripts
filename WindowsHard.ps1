@@ -780,9 +780,17 @@ function Harden {
 
 		Write-Host "[+] disabled anonymous users"
 
+        
+        # disable anonymous sam
+        Write-Host "[+] disabling anonymous sam touching..."
+        $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam"
+        if ($a.restrictanonymoussam -eq 1) {
+        } else {
+            Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam" -Value 1 -Force
+        }
+        Write-Host "[+] anonymous sam touching disabled"
 
 		# TODO enable/install wdac/applocker/or DeepBlue CLi?
-
 
 
 		# disable netbios ??????(might be too good)
