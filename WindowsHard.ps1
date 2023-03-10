@@ -79,6 +79,7 @@ function InstallTools {
 # once tools are run winpeas and parse the output and save it
 function ToolStart {
 	param (
+        $toolsPath
 	)
 
 	Write-Host "[+] opening tools..."
@@ -98,7 +99,7 @@ function ToolStart {
 		
         # run winpeas in the memory
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
-		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log")
+		$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log") > "$toolsPath\winpeas.txt"
 
 		# execute the parsers to convert to pdf
 		$installPython = Read-Host -Prompt "Would you like to install Python?"
@@ -726,7 +727,7 @@ function Harden {
 		
 
 		# start all the installed tools to find any possible weird things running
-		ToolStart
+		ToolStart ($toolsPath)
 
 
 		# change the execution policy for powershell for admins only (works for the current machine)
@@ -973,7 +974,7 @@ function Main {
                 "4" {InstallTools}
 
                 
-                "5" {ToolStart}
+                "5" {ToolStart($toolsPath)}
 
                 
                 "6" {RemoveTools}
