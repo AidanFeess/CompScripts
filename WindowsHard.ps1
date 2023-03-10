@@ -365,9 +365,29 @@ function ChangeCreds {
         }
     }
 
+    # password has to be changed first because it needs the username to change it
+    Write-Host "[+] You are now about to change your password"
+
+    $Password = Read-Host "Enter the new password" -AsSecureString
+    Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorVariable $FailPasswd -ErrorAction Continue
+    
+    if ($FailPasswd) {
+        
+        Write-Output "[-] Error in changing the password" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+
+        Write-Host "Run step 9 on the hardening checklist"
+
+    }else{
+
+        Write-Host "[+] changed password for ($env::Username)"
+        Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
+    
+    }
+
 	Write-Host "[+] You are about to change the username of the current admin"
 	$newUsername = Read-Host -Prompt "What is the new name?"
 	Rename-LocalUser -Name "$env:Username" -NewName "$newUsername" -ErrorVariable $FailUsername -ErrorAction Continue
+
 	
     if ($FailUsername) {
 
@@ -380,8 +400,6 @@ function ChangeCreds {
         Write-Host "[+] New username set"
     
     }
-
-	
 }
 
 function  RemoveTools {
@@ -548,7 +566,10 @@ function EnableDefenderOn {
         $step
     )
 
-    if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
+    # gather the status of WD
+    $wdav = Get-MpComputerStatus
+    
+    if ($wdav.AntivirusEnabled -eq $false) {
         
         $turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y) or (undo)"
         # TODO need to test
@@ -564,10 +585,13 @@ function EnableDefenderOn {
             New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
             New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
             New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
-            start-service WinDefend
-            start-service WdNisSvc	
+          
+            Start-Service -DisplayName "Windows Defender Antivirus Service"
+            Start-Service -DisplayName "Windows Defender Antivirus Network Inspection Service"	
         
-            if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $true) {
+        
+            $wdav = Get-MpComputerStatus
+            if ($wdav.AntivirusEnabled -eq $true) {
                 Write-Host "Windows Defender Enabled"
             }else{
                 Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
@@ -576,22 +600,27 @@ function EnableDefenderOn {
 
             Write-Host "Stopping Windows Defender..."
 
-            Stop-Service WdNisSvc
-            Stop-Service WinDefend
+            Stop-Service -DisplayName "Windows Defender Antivirus Service"
+            Stop-Service -DisplayName "Windows Defender Antivirus Network Inspection Service"	
+            
             Set-MpPreference -DisableRealtimeMonitoring $true
             Set-MpPreference -DisableIOAVProtection $true
+
             Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableBehaviorMonitoring" -Value 0 -PropertyType DWORD -Force
             Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableOnAccessProtection" -Value 0 -PropertyType DWORD -Force
             Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" -Name "DisableScanOnRealtimeEnable" -Value 0 -PropertyType DWORD -Force
             Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 0 -PropertyType DWORD -Force
             Remove-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "Real-Time Protection" -Force
 
-            if (Get-MpComputerStatus | Select-Object "AntivirusEnabled" -eq $false) {
+            $wdav = Get-MpComputerStatus
+            if ($wdav.AntivirusEnabled -eq $false) {
                 Write-Host "Windows Defender Disabled"
             }else{
                 Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
             }
         }
+    } else {
+        Write-Host "[+] Windows Defender is already active"
     }
 }
 
@@ -630,7 +659,7 @@ function Harden {
 		Write-Host "[+] clearing out guest accounts..."
 
         # note this should not need undo because no guests accounts should be allowed
-		$user = Get-LocalGroup -Name "guests" | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		$user = Get-LocalGroupMember -Name "Guests" 
 		foreach ($j in $user) { 
 			
             Write-Output "disabling guest: $j"
@@ -695,6 +724,7 @@ function Harden {
 		# Windows 8.1 (server 2016+) should already be on
         EnableDefenderOn($mode, $step)
 		
+
 		# start all the installed tools to find any possible weird things running
 		ToolStart
 
@@ -756,7 +786,6 @@ function Harden {
 
 		# disable netbios ??????(might be too good)
 		$adapters=(Get-WmiObject win32_networkadapterconfiguration )
-		
         foreach ($adapter in $adapters){
 		   
         	Write-Host $adapter
