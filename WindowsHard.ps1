@@ -775,7 +775,7 @@ function Harden {
 		# disable anonymous logins
 		Write-Host "[+] disabling anonymous users..."
 
-        Set-ItemProperty -Path "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RestrictAnonymous" -Value 1 -Force
+        Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous" -Value 1 -Force
 
 		Write-Host "[+] disabled anonymous users"
 
