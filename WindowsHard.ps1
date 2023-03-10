@@ -233,7 +233,7 @@ function WinFire {
 	$a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen -ErrorAction Continue
 
     # create the rule to block all unused ports and activate it later
-    New-NetFirewallRule -DisplayName "block all ports" -Direction Inbound -LocalPort Any -Action Block -Enabled False
+    New-NetFirewallRule -DisplayName "Block all ports" -Direction Inbound -LocalPort Any -Action Block -Enabled False
     
     if ($GetListen) {
 
@@ -297,11 +297,11 @@ function WinFire {
                 New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
                 New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
 
-    			Write-Host "[+] rdp(389) blocked"
+    			Write-Host "[+] rdp(3389) blocked"
 	
     		}else{
 	
-    			Write-Host "[+] rdp(389) will remain open"
+    			Write-Host "[+] rdp(3389) will remain open"
 	
     		}
 		}
@@ -311,7 +311,7 @@ function WinFire {
 	}
 
     # activate the rule from earlier
-    Set-NetFirewallRule -DisplayName "block all ports" -Protocol tcp -Direction Inbound -LocalPort Any -Action Block -Enabled True
+    # Enable-NetFirewallRule -DisplayName "Block all ports"
 
     Write-Host "[+] finished hardening firewall"
     Write-Host "[+] remember to do a deeper dive later and patch any holes"
@@ -327,7 +327,7 @@ function EditFirewallRule {
 
 	Write-Host "[+] editing firewall rule..."
 	
-	Set-NetFirewallRule -DisplayName "$action $direction $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status -ErrorVariable $EditRule -ErrorAction Continue
+	Set-NetFirewallRule -DisplayName "$action $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status -ErrorVariable $EditRule -ErrorAction Continue
     
     if ($EditRule) {
 
@@ -656,15 +656,16 @@ function Harden {
         $adminGroup -match '(?<==)[\w]+'
 
         # note this should not need undo because it only removes the account from the Administrators group
-		$user = Get-LocalGroup -Name $Matches[0] | Where-Object {$_ -AND $_ -notmatch "command completed successfully"} | Select-Object -Skip 4
+		$user = Get-LocalGroupMember -Name $Matches[0]
 		foreach ($x in $user) {
-        	if ($env:USERPROFILE -notmatch $user) {
-		
-        		Write-Output "disabling admin: $x"
-		   		Remove-LocalGroupMember -Group "Administrators" "$x"
-			
+            $st =[string]$x.Name
+            if ( -Not $st.Contains($env:USERNAME)) {
+            
+                Write-Output "disabling admin: $st"
+                Remove-LocalGroupMember -Group $Matches[0] $st
+            
             }
-		}
+        }
 		Write-Host "[+] pruned Administrator accounts"
 
 
