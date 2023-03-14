@@ -923,13 +923,13 @@ function Main {
 	Start-Sleep -Milliseconds 500
     Write-Host "[+] If any errors are made, a message will be printed to the console and stored into \Desktop\Tools\ErrLog.txt"
 
-	$usermode = Read-Host -Prompt "(Harden) or (Control)"
-	if ($usermode -eq ("Harden")) {
-		$mode = "Harden";
+	$usermode = Read-Host -Prompt "Harden(h) or Control(c)"
+	if ($usermode -eq ("harden")) {
+		$mode = "harden";
 		Harden($mode)
     } 
 
-    if ($usermode -eq ("Control"))  {
+    if ($usermode -eq ("control"))  {
 
         while($true) {
             Write-Host "[+] what would you like to do
@@ -947,7 +947,7 @@ function Main {
             - quit
             "
             
-            $choice = Read-Host -Prompt
+            $choice = Read-Host -Prompt "which mode do you want?"
             switch ($choice) {
 
                 "1" {
