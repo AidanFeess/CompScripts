@@ -3,6 +3,11 @@ Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
 Import-Module ScheduledTasks
+Enum Tools{  
+        TCPView
+        Procmon
+        Autoruns
+}
 
 # install the list of tools
 function InstallTools {
@@ -15,63 +20,37 @@ function InstallTools {
 	New-Item -Path "$env:USERPROFILE\Desktop\" -Name Tools -type Directory
 	
 	# -- Download the specific tools instead of downloading the entire suite --
-	
-	# TCPView
-	$TCPViewUrl = "https://download.sysinternals.com/files/TCPView.zip"	
-	Invoke-WebRequest $TCPViewUrl -OutFile "$env:USERPROFILE\Desktop\Tools\TCPView.zip" -ErrorAction Continue -ErrorVariable $DownTCP
+    
+    $urls = @(
+        TCPView = "https://download.sysinternals.com/files/TCPView.zip",
+        Procmon = "https://download.sysinternals.com/files/ProcessMonitor.zip", 
+        Autoruns = "https://download.sysinternals.com/files/Autoruns.zip"
+    )
 
-    if ($DownTCP) {
+    $zipPath = @(
+        TCPView = "$env:USERPROFILE\Desktop\Tools\TCPView.zip", 
+        Procmon = "$env:USERPROFILE\Desktop\Tools\ProcessMonitor.zip", 
+        Autoruns = "$env:USERPROFILE\Desktop\Tools\Autoruns.zip"
+    )
+
+    foreach ($tool in $Tools) {
         
-        Write-Output "[-] Error in downloading TCPView, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+        try {
+            Invoke-WebRequest $urls[$tool] -OutFile "$env:USERPROFILE\Desktop\Tools\$tool.zip" -ErrorAction Continue -ErrorVariable $DownTool
+        }catch {
 
-    }
-	
-    $zipPath = "$env:USERPROFILE\Desktop\Tools\TCPView.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$env:USERPROFILE\Desktop\Tools\TCPView" -ErrorAction Continue -ErrorVariable $UNZTCP
+            Write-Output "[-] Error in downloading Tool, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+            throw $_
+        }
 
-    if ($UNZTCP) {
-        
-        Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-    }
-	
-	# Procmon
-	$ProcmonUrl = "https://download.sysinternals.com/files/ProcessMonitor.zip"	
-	Invoke-WebRequest "$ProcmonUrl" -OutFile "$env:USERPROFILE\Desktop\Tools\ProcessMonitor.zip" -ErrorAction Continue -ErrorVariable $DownProcmon
-
-    if ($DownProcmon) {
-        
-        Write-Output "[-] Error in downloading Procmon, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-    }
-	
-    $zipPath = "$env:USERPROFILE\Desktop\Tools\ProcessMonitor.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$env:USERPROFILE\Desktop\Tools\Procmon" -ErrorAction Continue -ErrorVariable $UNZPROC
-
-    if ($UNZPROC) {
-        
-        Write-Output "[-] Error in unziping Procmon, make sure it was downloaded" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-    }
-	
-	# Autoruns/Autorunsc
-	$AutorunsUrl = "https://download.sysinternals.com/files/Autoruns.zip"	
-	Invoke-WebRequest "$AutorunsUrl" -OutFile "$env:USERPROFILE\Desktop\Tools\Autoruns.zip" -ErrorAction Continue -ErrorVariable $DownAutoruns
-
-    if ($DownAutoruns) {
-        
-        Write-Output "[-] Error in downloading Autoruns, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-    }
-	
-    $zipPath = "$env:USERPROFILE\Desktop\Tools\Autoruns.zip"
-	Expand-Archive -LiteralPath "$zipPath" -DestinationPath "$env:USERPROFILE\Desktop\Tools\Autoruns" -ErrorAction Continue -ErrorVariable $UNZAuto
-
-    if ($UNZAuto) {
-        
-        Write-Output "[-] Error in unziping Autoruns, make sure it was downloaded" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-    }
+        try {
+            Expand-Archive -LiteralPath "$zipPath[$tool]" -DestinationPath "$env:USERPROFILE\Desktop\Tools\$tool" -ErrorAction Continue -ErrorVariable $UNZIP
+        } catch {
+            
+            Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+            throw $_
+        } 
+    }   
 	
 	Write-Host "[+] finished installing tools"
 }
@@ -84,15 +63,21 @@ function ToolStart {
 
 	Write-Host "[+] opening tools..."
 
+    $paths = @(
+        "$env:USERPROFILE\Desktop\Tools\Procmon\Procmon64.exe"
+        "$env:USERPROFILE\Desktop\Tools\Autoruns\Autoruns64.exe"
+        "$env:USERPROFILE\Desktop\Tools\TCPView\tcpview64.exe"
+    )
+
 	# open autoruns, procmon, TCPView
-	Invoke-Expression "$env:USERPROFILE\Desktop\Tools\Procmon\Procmon64.exe"
-	Start-Sleep -Milliseconds 500
-	
-    Invoke-Expression "$env:USERPROFILE\Desktop\Tools\Autoruns\Autoruns64.exe"
-	Start-Sleep -Milliseconds 500
-	
-    Invoke-Expression "$env:USERPROFILE\Desktop\Tools\TCPView\tcpview64.exe"
-	Start-Sleep -Milliseconds 500
+     foreach ($path in $paths) {
+        try {
+        Invoke-Expression -Command $path
+	    Start-Sleep -Milliseconds 500
+        } catch {
+            throw $_
+        }
+    }
 
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
 	if ($runWinpeas -eq ("y")) {
@@ -775,9 +760,15 @@ function Harden {
 
 		# disable anonymous logins
 		Write-Host "[+] disabling anonymous users..."
-
-        Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous" -Value 1 -Force
-
+        $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous"
+        if ($a.restrictanonymous -eq 1) {
+        }else{
+            try {
+            Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous" -Value 1 -Force
+            } catch {
+                throw $_
+            }
+        }
 		Write-Host "[+] disabled anonymous users"
 
         
@@ -786,7 +777,11 @@ function Harden {
         $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam"
         if ($a.restrictanonymoussam -eq 1) {
         } else {
+            try {
             Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam" -Value 1 -Force
+            } catch {
+                throw $_
+            }
         }
         Write-Host "[+] anonymous sam touching disabled"
 
@@ -809,7 +804,6 @@ function Harden {
         if ($updates -eq ("y")) {
 			WinUP
 		}
-
 }
 
 function Undo {
