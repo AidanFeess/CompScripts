@@ -3,11 +3,19 @@ Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
 Import-Module ScheduledTasks
+
 Enum Tools{  
-        TCPView
-        Procmon
-        Autoruns
+    TCPView
+    Procmon
+    Autoruns
 }
+
+# Enum PythonTools {
+#     python3.exe;
+#     peas2json.py;
+#     json2pdf.py;
+# }
+
 
 # install the list of tools
 function InstallTools {
@@ -70,7 +78,7 @@ function ToolStart {
     )
 
 	# open autoruns, procmon, TCPView
-     foreach ($path in $paths) {
+    foreach ($path in $paths) {
         try {
         Invoke-Expression -Command $path
 	    Start-Sleep -Milliseconds 500
@@ -80,7 +88,7 @@ function ToolStart {
     }
 
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
-	if ($runWinpeas -eq ("y")) {
+	if ($runWinpeas -eq "y") {
 		
         # run winpeas in the memory
 		$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
@@ -88,46 +96,38 @@ function ToolStart {
 
 		# execute the parsers to convert to pdf
 		$installPython = Read-Host -Prompt "Would you like to install Python?"
-		if ($installPython -eq ("y")) {
+		if ($installPython -eq "y") {
 		
         	Write-Host "[+] WARNING this can leave your system vulnerable" 
 			Write-Host "[+] Consider removing these items after use if they aren't going to be controlled" 
 
-			Invoke-Webrequest "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe" -Outfile "$env:USERPROFILE\Desktop\Tools\python3.exe" -ErrorAction Continue -ErrorVariable $DownPYTHON
+            $pythonList = @(
+                "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe", 
+                "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py",
+                "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"  
+            )
 
-            if ($DownPYTHON) {
+            foreach ($tools in PythonTools) {
+
+			    Invoke-Webrequest "$pythonList[$tools]" -Outfile "$env:USERPROFILE\Desktop\Tools\$tools" -ErrorAction Continue -ErrorVariable $DownPYTHON
+                if ($DownPYTHON) {
+                    
+                    Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+
+                }
                 
-                Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+                if ($tools -eq python3.exe) {
 
+                    # still need to manually install
+                    Write-Host "[+] install python and make sure to add to your path"
+
+                    Invoke-Expression -Command "$env:USERPROFILE\Desktop\Tools\python3.exe" 
+                }
+        
             }
-
-            # still need to manually install
-            Write-Host "[+] install python and make sure to add to your path"
-
-            Invoke-Expression -Command "$env:USERPROFILE\Desktop\Tools\python3.exe" 
 
             # should refresh the path so that the parsers can be used in the same session
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-            # -- download the parsers used for the output --
-		
-			$jsonUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py" 
-			Invoke-WebRequest $jsonUrl -OutFile "$env:USERPROFILE\Desktop\Tools\peas2json.py" -ErrorAction Continue -ErrorVariable $DownJSONPARSE
-
-            if ($DownJSONPARSE) {
-        
-                Write-Output "[-] Error in downloading json peas parser, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-            }
-            
-			$pdfUrl = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"
-			Invoke-WebRequest $pdfUrl -OutFile "$env:USERPROFILE\Desktop\Tools\json2pdf.py" -ErrorAction Continue -ErrorVariable $DownPDFPARSE
-
-            if ($DownPDFPARSE) {
-        
-                Write-Output "[-] Error in downloading pdf peas parser, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-            }
 
 		}
 		
@@ -138,9 +138,7 @@ function ToolStart {
     
         # open the pdf for viewing
         Start-Process ((Resolve-Path "C:\..\peas.pdf").Path)
-        
 	}
-
 	Write-Host "[+] all tools opened"
 }
 
@@ -471,8 +469,11 @@ function Discovery {
         Write-Host "[+] gathering services..."
         Get-Service -Verbose | Format-Table -AutoSize > "$discoverypath\services.txt"
 
-        Write-Host "[+] gathering processes..."
-        Get-Process -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
+        # gather the running process on a system with the username tagged to it
+        Write-Host "[+] gather running processes..."
+        $owners = @{}
+        Get-WmiObject win32_process | Foreach-Object {$owners[$_.handle] = $_.getowner().user} -ErrorAction SilentlyContinue
+        Get-Process | Select-Object processname,Id,@{l="Owner";e={$owners[$_.id.tostring()]}} -ErrorAction SilentlyContinue
 
         Write-Host "[+] gathering tcp connections..."
         Get-NetTCPConnection -Verbose | Format-Table -AutoSize > "$discoverypath\processes.txt"
@@ -499,14 +500,14 @@ function SetUAC {
 	# set the values
 	$path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
 	
-    New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorAdmin' -Value 2 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'ConsentPromptBehaviorUser' -Value 3 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'EnableInstallerDetection' -Value 1 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'EnableVirtualization' -Value 1 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'PromptOnSecureDesktop' -Value 1 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'ValidateAdminCodeSignatures' -Value 0 -PropertyType DWORD -Force | Out-Null
-	New-ItemProperty -Path $path -Name 'FilterAdministratorToken' -Value 0 -PropertyType DWORD -Force | Out-Null
+    Set-ItemProperty -Path $path -Name 'ConsentPromptBehaviorAdmin' -Value 2 -PropertyType DWORD -Force | Out-Null
+	Set-ItemProperty -Path $path -Name 'ConsentPromptBehaviorUser' -Value 3 -PropertyType DWORD -Force | Out-Null
+	Set-ItemProperty -Path $path -Name 'EnableInstallerDetection' -Value 1 -PropertyType DWORD -Force | Out-Null
+	Set-ItemProperty -Path $path -Name 'EnableLUA' -Value 1 -PropertyType DWORD -Force | Out-Null
+	Set-ItemProperty -Path $path -Name 'EnableVirtualization' -Value 1 -PropertyType DWORD -Force | Out-Null
+	Set-ItemProperty -Path $path -Name 'PromptOnSecureDesktop' -Value 1 -PropertyType DWORD -Force | Out-Null
+	Set-ItemProperty -Path $path -Name 'ValidateAdminCodeSignatures' -Value 0 -PropertyType DWORD -Force | Out-Null
+	Set-ItemProperty -Path $path -Name 'FilterAdministratorToken' -Value 0 -PropertyType DWORD -Force | Out-Null
 
 	Write-Host "[+] values set"
 }
@@ -784,6 +785,20 @@ function Harden {
             }
         }
         Write-Host "[+] anonymous sam touching disabled"
+        
+        # disable editing of the registry through tools
+        # warning this will stop a user from editing the registry all together
+        Write-Host "[+] disabling redgedit..."
+        $a = Get-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools"
+        if ($a.disableregistrytools -eq 2) {
+        } else {
+            try {
+            Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools" -Value 2 -Force
+            } catch {
+                throw $_
+            }
+        }
+        Write-Host "[+] registry editing via tools disabled"
 
 		# TODO enable/install wdac/applocker/or DeepBlue CLi?
 
@@ -924,12 +939,12 @@ function Main {
     Write-Host "[+] If any errors are made, a message will be printed to the console and stored into \Desktop\Tools\ErrLog.txt"
 
 	$usermode = Read-Host -Prompt "Harden(h) or Control(c)"
-	if ($usermode -eq ("harden")) {
+	if ($usermode -eq ("h")) {
 		$mode = "harden";
 		Harden($mode)
     } 
 
-    if ($usermode -eq ("control"))  {
+    if ($usermode -eq ("c"))  {
 
         while($true) {
             Write-Host "[+] what would you like to do
@@ -972,15 +987,11 @@ function Main {
                     ChangeCreds($credsmode)
                 }
 
-                
                 "4" {InstallTools}
 
-                
                 "5" {ToolStart($toolsPath)}
 
-                
                 "6" {RemoveTools}
-
                 
                 "7" {
 
@@ -991,10 +1002,8 @@ function Main {
                     
                     Discovery($discoveryMode)
                 }
-
                 
                 "8" {DefenderScan}
-
 
                 "9" {
                     
@@ -1003,7 +1012,6 @@ function Main {
                     Undo
 
                 }
-
 
                 "10" {
                     
@@ -1017,7 +1025,6 @@ function Main {
                     }
                      
                 }
-
 
                 "Wonk" {
                     
@@ -1051,9 +1058,7 @@ function Main {
                     }
                 }
                 
-
                 "quit" {return}
-
 
                 default {continue}
             } 
