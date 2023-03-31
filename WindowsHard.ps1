@@ -10,11 +10,11 @@ Enum Tools{
     Autoruns
 }
 
-# Enum PythonTools {
-#     python3.exe;
-#     peas2json.py;
-#     json2pdf.py;
-# }
+enum PythonTools {
+    python3;
+    peas2json;
+    json2pdf;
+}
 
 
 # install the list of tools
@@ -80,8 +80,8 @@ function ToolStart {
 	# open autoruns, procmon, TCPView
     foreach ($path in $paths) {
         try {
-        Invoke-Expression -Command $path
-	    Start-Sleep -Milliseconds 500
+            Invoke-Expression -Command $path
+            Start-Sleep -Milliseconds 500
         } catch {
             throw $_
         }
@@ -102,21 +102,20 @@ function ToolStart {
 			Write-Host "[+] Consider removing these items after use if they aren't going to be controlled" 
 
             $pythonList = @(
-                "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe", 
-                "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py",
-                "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"  
+                python3 = "https://www.python.org/ftp/python/3.11.2/python-3.11.2-amd64.exe", 
+                peas2json = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/peas2json.py",
+                json2pdf = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"  
             )
 
             foreach ($tools in PythonTools) {
 
-			    Invoke-Webrequest "$pythonList[$tools]" -Outfile "$env:USERPROFILE\Desktop\Tools\$tools" -ErrorAction Continue -ErrorVariable $DownPYTHON
-                if ($DownPYTHON) {
-                    
-                    Write-Output "[-] Error in downloading python3 installer, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
+                try {
+			        Invoke-Webrequest "$pythonList[$tools]" -Outfile "$env:USERPROFILE\Desktop\Tools\$tools" -ErrorAction Continue -ErrorVariable $DownPYTHON
+                } catch {
+                    throw $_
                 }
-                
-                if ($tools -eq python3.exe) {
+                    
+                if ($tools -eq [Tools].python3) {
 
                     # still need to manually install
                     Write-Host "[+] install python and make sure to add to your path"
@@ -289,7 +288,42 @@ function WinFire {
 	
     		}
 		}
+        
+        if ($x -eq 5985) {
+	
+    		$response = Read-Host -Prompt "Do you want to block WinRM http?"
 
+			if ($response -eq "y") {
+	
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+
+    			Write-Host "[+] WinRM(5985) blocked"
+	
+    		}else{
+	
+    			Write-Host "[+] WinRM(5985) will remain open"
+	
+    		}
+		}
+
+        if ($x -eq 5986) {
+	
+    		$response = Read-Host -Prompt "Do you want to block WinRM https?"
+
+			if ($response -eq "y") {
+	
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+
+    			Write-Host "[+] WinRM(5986) blocked"
+	
+    		}else{
+	
+    			Write-Host "[+] WinRM(5986) will remain open"
+	
+    		}
+		}
         # allow the port if it was previously listening
         New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Allow
 	}
@@ -629,12 +663,13 @@ function Harden {
 
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
-		Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
-        if ($DOWNMB) {
-        
-            Write-Output "[-] Error in downloading malwarebytes, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
+        try {
+            Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
         }
+        catch {
+            throw $_
+        }
+        
 
 		# Run Malwarebytes
 		Write-Host "[+] click to install the software"
@@ -719,34 +754,22 @@ function Harden {
 		# change the execution policy for powershell for admins only (works for the current machine)
 		# rest of restrictions happen in group policy and active directory
 		Write-Host "[+] changing powershell policy..."
-		
-        Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue -ErrorVariable $SETPOW 
-
-        if ($SETPOW) {
-            
-            Write-Output "[-] Error in changing the execution policy to restricted" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-        
-        }else{
-    	
-    	    Write-Host "[+] Changed the Powershell policy to Restricted"
-        
+        try {
+            Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue -ErrorVariable $SETPOW 
+        }
+        catch {
+            throw $_
         }
 	   
 
     	# disable WinRM
 		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
     	if ($disableWinRm -eq ("y")) {
-	   
-    		Disable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE 
-            
-            if ($PSRREMOTE) {
-
-                Write-Output "[-] Error in disabling WinRm" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-            }else{
-
-			    Write-Host "[+] disabled WinRm"
-	        
+            try {
+    		    Disable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE 
+            }
+            catch {
+                throw $_
             }
     	}
 
