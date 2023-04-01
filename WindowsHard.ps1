@@ -119,15 +119,17 @@ function ToolStart {
 
                     # still need to manually install
                     Write-Host "[+] install python and make sure to add to your path"
-
                     Invoke-Expression -Command "$env:USERPROFILE\Desktop\Tools\python3.exe" 
                 }
-        
+            }
+            
+            # wait for python to finish installing
+            while (Get-Procces -Name python3 -ErrorAction SilentlyContinue) {
+               continue; 
             }
 
             # should refresh the path so that the parsers can be used in the same session
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
 		}
 		
         # run the parsers so that it can be viewed easily
@@ -213,21 +215,19 @@ function WinFire {
 	Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogAllowed True -LogIgnored True -LogBlocked True -LogMaxSize 4096 -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
 	# get the current listening conections ports
-	$a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen -ErrorAction Continue
+    try {
+        $a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen -ErrorAction Continue
+    } catch {
+        throw $_
+    }
 
     # create the rule to block all unused ports and activate it later
     New-NetFirewallRule -DisplayName "Block all ports" -Direction Inbound -LocalPort Any -Action Block -Enabled False
     
-    if ($GetListen) {
-
-        Write-Output "[-] Error in geting the active list of listening ports" | Out-File -FilePath "toolsPath\ErrOut.txt"
-                 
-    }
-
 	Write-Host "[+] You are possibly going to be asked if you want to block certain ports"
 	Write-Host "[+] your options are ( y ) or ( n )"
 
-	# parse the list to remove ports that shouldn't 
+	# parse the list to remove ports that shouldn't be open
 	for ($x = 0; $x -lt ($a.Length - 1); $x++) {
 		
         $portNum = $a[$x].LocalPort
@@ -362,8 +362,8 @@ function ChangeCreds {
         $mode
 	)
 
+    # password has to be changed first because it needs the username to change it
     if ($mode -eq "control") {
-        # password has to be changed first because it needs the username to change it
         Write-Host "[+] You are now about to change your password"
 
         $Password = Read-Host "Enter the new password" -AsSecureString
@@ -372,7 +372,6 @@ function ChangeCreds {
         if ($FailPasswd) {
             
             Write-Output "[-] Error in changing the password" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
             Write-Host "Run step 9 on the hardening checklist"
 
         }else{
@@ -456,14 +455,11 @@ function  RemoveTools {
     }
 
     # remove the directory with all of the installed tools in it
-	Remove-Item -LiteralPath "$env:USERPROFILE\Desktop\Tools" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
-    
-    if ($RmTools) {
-        
-        Write-Output "[-] Error in trying to remove the Tools directory" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-         
+    try {
+        Remove-Item -LiteralPath "$env:USERPROFILE\Desktop\Tools" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
+    } catch {
+        throw $_
     }
-
 	Write-Host "[+] Deleted the tools directory"
 }
 
@@ -654,19 +650,16 @@ function Harden {
         # check if the Tools folder is already created
 		Write-Host "[+] checking to see if the tools are installed..."
 	    if (Test-Path -Path "$env:USERPROFILE\Desktop\Tools") {
-
+            continue;
         } else {
-
             InstallTools
-
 	    }
 
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
         try {
             Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
-        }
-        catch {
+        } catch {
             throw $_
         }
         
@@ -870,9 +863,7 @@ function Undo {
             # looks for services that have "Exchange"
             # seems to be the naming convention
             if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
-
                 ExchangeHard ($mode) 
-                
             }else {
 
                 Write-Host "This machine is not runnning Exchange"
@@ -881,15 +872,12 @@ function Undo {
         }
 
         "Defender" {
-
             EnableDefenderOn($mode)
-
         }
 
         "Psh" {
 
             Write-Host "[+] changing powershell policy..."
-		
             Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope LocalMachine -ErrorAction Continue -ErrorVariable $SETPOW -Confirm
 
             if ($SETPOW) {
@@ -909,9 +897,8 @@ function Undo {
             $enableWinRm = Read-Host -Prompt "enable WinRm? (y) or (n), WARNING his will make your machine vulnerable to RCE"
         
             if ($enableWinRm -eq ("y")) {
-           
                 Enable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE -Confirm
-                
+
                 if ($PSRREMOTE) {
 
                     Write-Output "[-] Error in enabling WinRm" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
@@ -1017,12 +1004,10 @@ function Main {
                 "6" {RemoveTools}
                 
                 "7" {
-
                     Write-Host "Do you want to perform a dump (y) or (undo), 
                     WARNING (undo) will remove the dump"
 
                     $discoveryMode = Read-Host -Prompt "What mode?"
-                    
                     Discovery($discoveryMode)
                 }
                 
@@ -1031,7 +1016,6 @@ function Main {
                 "9" {
                     
                     Write-Host "Remember that functions already exist that can undo like RemoveTools"
-
                     Undo
 
                 }
@@ -1050,35 +1034,18 @@ function Main {
                 }
 
                 "Wonk" {
-                    
-                    # Wonks a selected session that is seen as the operator as not being legit
-                    $to_Wonk_or_Not_to_Wonk = Read-Host -Prompt "Are you sure you want to Wonk?"
+                    # download the version of dotnet required to run wonk
+                    Invoke-WebRequest "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.100-preview.2-windows-x64-installer" -OutFile ""
+                    Invoke-Expression ""
 
-                    if ($to_Wonk_or_Not_to_Wonk -eq ("y")) {
-                        $wonkable = Get-NetTCPConnection -State Established -Verbose | Select-Object -Property LocalPort, RemotePort, OwningProcess
+                    # TODO fix later creates the scheduled task for wonk persistance
+                    $action = New-ScheduledTaskAction -Execute "powershell.exe if (Get-Procces -Name wonk.exe) {}else{.\wonk.exe}"
+                    $trigger = New-ScheduledTaskTrigger -RepetitionInterval 3mins
+                    $principal = New-ScheduledTaskPrincipal -RequiredPrivilege "Administrator"
+                    $settings = New-ScheduledTaskSettingsSet -Hidden
+                    $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
 
-                        foreach ($x in $wonkable) {
-                            if ($x.LocalPort -eq (22)) {
-                                Write-Host "$x"
-                            }
-
-                            if ($x.LocalPort -eq (3389)) {
-                                Write-Host "$x"
-                            }
-
-                            if ($x.LocalPort -eq (5900)) {
-                                Write-Host "$x"
-                            }
-                        }
-
-                        # note the TM is a joke
-                        $bewonked = Read-Host -Prompt "What process do you want to (*PRE*)Wonk(TM)"
-
-                        # Wonks the target
-                        Stop-Process $bewonked
-
-                        Write-Host "[+] Session has been (*PRE*)Wonked"
-                    }
+                    Register-ScheduledTask "wakeup" -InputObject $task
                 }
                 
                 "quit" {return}
