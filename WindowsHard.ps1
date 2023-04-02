@@ -367,56 +367,40 @@ function ChangeCreds {
         Write-Host "[+] You are now about to change your password"
 
         $Password = Read-Host "Enter the new password" -AsSecureString
-        Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorVariable $FailPasswd -ErrorAction Continue
-        
-        if ($FailPasswd) {
-            
-            Write-Output "[-] Error in changing the password" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-            Write-Host "Run step 9 on the hardening checklist"
-
-        }else{
-
-            Write-Host "[+] changed password for ($env::Username)"
-            Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
-        
+        try {
+        Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorAction Continue
+        } catch {
+            throw $_
+            Write-Host "[-] Error in changing password, checks docs to perform manual change"
         }
+        Write-Host "[+] changed password for ($env::Username)"
+        Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
+
+        return;
     }
 
     # password has to be changed first because it needs the username to change it
     Write-Host "[+] You are now about to change your password"
-
     $Password = Read-Host "Enter the new password" -AsSecureString
-    Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorVariable $FailPasswd -ErrorAction Continue
-    
-    if ($FailPasswd) {
-        
-        Write-Output "[-] Error in changing the password" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
 
-        Write-Host "Run step 9 on the hardening checklist"
-
-    }else{
-
-        Write-Host "[+] changed password for ($env::Username)"
-        Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
-    
+    try {
+    Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password -ErrorAction Continue
+    } catch {
+        throw $_
+        Write-Host "[-] Error in changing password, checks docs to perform manual change"
     }
+    Write-Host "[+] changed password for ($env::Username)"
+    Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT"
 
 	Write-Host "[+] You are about to change the username of the current admin"
 	$newUsername = Read-Host -Prompt "What is the new name?"
-	Rename-LocalUser -Name "$env:Username" -NewName "$newUsername" -ErrorVariable $FailUsername -ErrorAction Continue
 
-	
-    if ($FailUsername) {
-
-        Write-Output "[-] Error in trying to change the username" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-        Write-Host "Run step 11 on the hardening checklist"
-
-    }else{
-
-        Write-Host "[+] New username set"
-    
+    try {
+        Rename-LocalUser -Name "$env:Username" -NewName "$newUsername" -ErrorAction Continue
+    } catch {
+        throw $_
     }
+    Write-Host "[+] New username set"
 }
 
 function  RemoveTools {
@@ -444,7 +428,7 @@ function  RemoveTools {
         
         # move over the python3.11
         Write-Host "[+] Moving python3.11..."
-        Move-Item -Path "$env:USERPROFILE\Desktop\Tools\python3.11.exe" -Destination "$env:USERPROFILE\Desktop\" -ErrorVariable $MOVPYTH -ErrorAction Continue
+        Move-Item -Path "$env:USERPROFILE\Desktop\Tools\python3.11.exe" -Destination "$env:USERPROFILE\Desktop\" -ErrorAction Continue
         Write-Host "[+] Python moved"
 
         # move over the malwarebytes just in case
@@ -456,7 +440,7 @@ function  RemoveTools {
 
     # remove the directory with all of the installed tools in it
     try {
-        Remove-Item -LiteralPath "$env:USERPROFILE\Desktop\Tools" -Force -Recurse -ErrorVariable $RmTools -ErrorAction Continue
+        Remove-Item -LiteralPath "$env:USERPROFILE\Desktop\Tools" -Force -Recurse -ErrorAction Continue
     } catch {
         throw $_
     }
@@ -467,20 +451,14 @@ function Discovery {
 	param (
         $mode
 	)
-    l
 
     $discoverypath = "$env:USERPROFILE\Desktop\Discovery"
 
     # note in this case removing the dump is = "undoing it"
     if ($mode -eq "undo") {
         
-	    Remove-Item -LiteralPath "$discoverypath" -Force -Recurse -ErrorVariable $RmDiscovery -ErrorAction Continue
+	    Remove-Item -LiteralPath "$discoverypath" -Force -Recurse -ErrorAction Continue
 
-        if ($RmDiscovery) {
-
-            Write-Output "[-] Error in trying to remove the discovery dump" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-        
-        }
     }
 
     if ($mode -eq "y") { 
@@ -591,7 +569,7 @@ function EnableDefenderOn {
         $turnDefenderOn = Read-Host -Prompt "Do you want to turn on Windows Defender (y) or (undo)"
         # TODO need to test
     
-        if ($turnDefenderOn -eq ("y")) {
+        if ($turnDefenderOn -eq "y") {
         
             Write-Host "Enabling Windows Defender..."
 
@@ -611,7 +589,7 @@ function EnableDefenderOn {
             if ($wdav.AntivirusEnabled -eq $true) {
                 Write-Host "Windows Defender Enabled"
             }else{
-                Write-Output "[-] Error in trying to startup Windows Defender" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in trying to startup Windows Defender"
             }
         }elseif (($turnDefenderOn -eq "undo") -and ($step -eq 4)) {
 
@@ -633,7 +611,7 @@ function EnableDefenderOn {
             if ($wdav.AntivirusEnabled -eq $false) {
                 Write-Host "Windows Defender Disabled"
             }else{
-                Write-Output "[-] Error in trying to stop Windows Defender" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
+                Write-Output "[-] Error in trying to stop Windows Defender"
             }
         }
     } else {
@@ -658,7 +636,7 @@ function Harden {
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
         try {
-            Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe" -ErrorAction Continue -ErrorVariable $DOWNMB
+            Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe" -ErrorAction Continue
         } catch {
             throw $_
         }
@@ -748,9 +726,8 @@ function Harden {
 		# rest of restrictions happen in group policy and active directory
 		Write-Host "[+] changing powershell policy..."
         try {
-            Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue -ErrorVariable $SETPOW 
-        }
-        catch {
+            Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue
+        } catch {
             throw $_
         }
 	   
@@ -759,15 +736,14 @@ function Harden {
 		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
     	if ($disableWinRm -eq ("y")) {
             try {
-    		    Disable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE 
-            }
-            catch {
+    		    Disable-PSRemoting -Force -ErrorAction Continue
+            } catch {
                 throw $_
             }
     	}
 
 
-		# change the password/username of the current admin
+		# change the password/username of the current admin user
 		ChangeCreds($mode)
 		
 
@@ -778,8 +754,7 @@ function Harden {
 		# disable anonymous logins
 		Write-Host "[+] disabling anonymous users..."
         $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous"
-        if ($a.restrictanonymous -eq 1) {
-        }else{
+        if ($a.restrictanonymous -ne 1) {
             try {
             Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous" -Value 1 -Force
             } catch {
@@ -792,8 +767,7 @@ function Harden {
         # disable anonymous sam
         Write-Host "[+] disabling anonymous sam touching..."
         $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam"
-        if ($a.restrictanonymoussam -eq 1) {
-        } else {
+        if ($a.restrictanonymoussam -ne 1) {
             try {
             Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam" -Value 1 -Force
             } catch {
@@ -806,8 +780,7 @@ function Harden {
         # warning this will stop a user from editing the registry all together
         Write-Host "[+] disabling redgedit..."
         $a = Get-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools"
-        if ($a.disableregistrytools -eq 2) {
-        } else {
+        if ($a.disableregistrytools -ne 2) {
             try {
             Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools" -Value 2 -Force
             } catch {
@@ -861,13 +834,10 @@ function Undo {
             continue;
 
             # looks for services that have "Exchange"
-            # seems to be the naming convention
             if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
                 ExchangeHard ($mode) 
             }else {
-
                 Write-Host "This machine is not runnning Exchange"
-                
             }
         }
 
@@ -878,17 +848,13 @@ function Undo {
         "Psh" {
 
             Write-Host "[+] changing powershell policy..."
-            Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope LocalMachine -ErrorAction Continue -ErrorVariable $SETPOW -Confirm
-
-            if ($SETPOW) {
-                
-                Write-Output "[-] Error in changing the execution policy to Undefined" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-            
-            }else{
-            
-                Write-Host "[+] Changed the Powershell policy to Undefined"
-            
+            try {
+                Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope LocalMachine -ErrorAction Continue -Confirm
+            } catch {
+                throw $_
+                Write-Output "[-] Error in changing the execution policy to Undefined"
             }
+            Write-Host "[+] Changed the Powershell policy to Undefined"
         }
 
         "WinRM" {
@@ -897,19 +863,14 @@ function Undo {
             $enableWinRm = Read-Host -Prompt "enable WinRm? (y) or (n), WARNING his will make your machine vulnerable to RCE"
         
             if ($enableWinRm -eq ("y")) {
-                Enable-PSRemoting -Force -ErrorAction Continue -ErrorVariable $PSRREMOTE -Confirm
-
-                if ($PSRREMOTE) {
-
-                    Write-Output "[-] Error in enabling WinRm" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
-
-                }else{
-
-                    Write-Host "[+] Enabled WinRm"
-                
+                try {
+                    Enable-PSRemoting -Force -ErrorAction Continue -Confirm
+                } catch {
+                    throw $_
+                    Write-Host "[-] Error in Enabling WinRM"
                 }
+                Write-Host "[+] Enabled WinRm"
             }
-
         }
 
         "netbios" { continue }
@@ -1027,7 +988,7 @@ function Main {
 
                     $punUser = Read-Host -Prompt "What user do you want to punish?"
                     while ($true) {
-                        Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $punUser
+                        Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $runUser
                         Start-Sleep (5)
                     }
                      
@@ -1035,8 +996,8 @@ function Main {
 
                 "Wonk" {
                     # download the version of dotnet required to run wonk
-                    Invoke-WebRequest "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.100-preview.2-windows-x64-installer" -OutFile ""
-                    Invoke-Expression ""
+                    Invoke-WebRequest "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-7.0.202-windows-x64-installer" -OutFile "$env:Userprofile\Desktop\Tools\dotnet7.exe"
+                    Invoke-Expression "$env:USERPROFILE\Desktop\Tools\dotnet7.exe"
 
                     # TODO fix later creates the scheduled task for wonk persistance
                     $action = New-ScheduledTaskAction -Execute "powershell.exe if (Get-Procces -Name wonk.exe) {}else{.\wonk.exe}"
