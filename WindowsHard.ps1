@@ -919,24 +919,25 @@ function Main {
 
         while($true) {
             Write-Host "[+] what would you like to do
-            - edit a firewall rule(1)
-            - change a group policy(2) (TODO)
-            - Change Password(3)
-            - Install Tools(4)
-            - Start Tools(5)
-            - Remove Tools(6)
-            - Discovery(7)
-            - DefenderScan(8)
-            - Undo(9)
-            - OSK Spawn(10)
-            - Start Wonk(Wonk)(???)
+            - (fw) edit a firewall rule
+            - (gpo) Change a group policy (TODO)
+            - (chpwd) Change Password
+            - (instls) Install Tools
+            - (strtls) Start Tools
+            - (rmtls) Remove Tools
+            - (disc) Discovery
+            - (scan) DefenderScan
+            - (Undo) Undo
+            - (OSK) OSK Spawn
+            - (Wonk) Start Wonk (???)
+            - (blkpwd) Bulk Password Change (AD)
             - quit
             "
             
             $choice = Read-Host -Prompt "which mode do you want?"
             switch ($choice) {
 
-                "1" {
+                "fw" {
                     [Int]$portNum = Read-Host -Prompt "which port (num)"
                     $action = Read-Host -Prompt "(allow) or (block)"
                     $direction = Read-Host -Prompt "which direction (in) or (out)"
@@ -946,25 +947,25 @@ function Main {
                     EditFirewallRule ($portNum, $action, $direction, $status)
                 }
 
-                "2" {
+                "gpo" {
 
                     continue;
 
                     # TODO populate this with stuff after group policy is added
                 }
 
-                "3" {
+                "chpwd" {
                     $credsmode = "control"
                     ChangeCreds($credsmode)
                 }
 
-                "4" {InstallTools}
+                "instls" {InstallTools}
 
-                "5" {ToolStart($toolsPath)}
+                "strtls" {ToolStart($toolsPath)}
 
-                "6" {RemoveTools}
+                "rmtls" {RemoveTools}
                 
-                "7" {
+                "disc" {
                     Write-Host "Do you want to perform a dump (y) or (undo), 
                     WARNING (undo) will remove the dump"
 
@@ -972,16 +973,16 @@ function Main {
                     Discovery($discoveryMode)
                 }
                 
-                "8" {DefenderScan}
+                "scan" {DefenderScan}
 
-                "9" {
+                "Undo" {
                     
                     Write-Host "Remember that functions already exist that can undo like RemoveTools"
                     Undo
 
                 }
 
-                "10" {
+                "OSK" {
                     
                     continue;
                     # TODO finish fun
@@ -1007,6 +1008,19 @@ function Main {
                     $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
 
                     Register-ScheduledTask "wakeup" -InputObject $task
+                }
+
+                "blkpwd" {
+
+                    # TODO fix to randomly generate a password that meets compliance
+                    $users = Get-ADGroupMember -Identity 'Internals'
+                    $pass = Read-Host -Prompt "password" -AsSecureString
+
+                    foreach($user in $users){
+                        Set-ADAccountPassword -Identity $user -Reset -NewPassword $pass; 
+                        $temp = $user.SamAccountName;
+                        echo "$temp,$pass" >> C:\Users\$env:Username\Desktop\export.csv
+                    }
                 }
                 
                 "quit" {return}
