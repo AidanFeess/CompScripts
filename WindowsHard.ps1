@@ -492,6 +492,10 @@ function Discovery {
         Write-Host "[+] gathering any startup apps..."
         Get-StartApps | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
 
+        Write-Host "[+] gathering list of users for diff..."
+        Get-ADGroupMember | Format-Table -AutoSize > "$discoverypath\lsadusrs.txt"
+        Get-LocalUser | Format-Table -AutoSize > "$discoverypath\lslusrs.txt"
+
         Write-Host "[+] data dumped to 'Discovery' folder on your desktop"
     
         Write-Host "[+] You should still be using other tools because this won't catch everything"
@@ -1011,12 +1015,24 @@ function Main {
                 }
 
                 "blkpwd" {
+                    # from Doggle, who was the best at hardening AD
 
-                    # TODO fix to randomly generate a password that meets compliance
+                    # build the character array for generating the passwords
+                    $alph=@()
+                    65..122|foreach{$alph += [char]$_}
+                    $alph
+
+                    # just to help make things more random
+                    $alph = $alph | Get-Random -Shuffle
+
                     $users = Get-ADGroupMember -Identity 'Internals'
                     $pass = Read-Host -Prompt "password" -AsSecureString
 
+                    # take the users and generate their passwords and set them
+                    # save them to a csv file for transport
                     foreach($user in $users){
+                        for($i = 0; $i -lt 21; $i++) { $pass = $alph | Get-Random }
+                        ConvertTo-SecureString -AsPlainText $pass;
                         Set-ADAccountPassword -Identity $user -Reset -NewPassword $pass; 
                         $temp = $user.SamAccountName;
                         echo "$temp,$pass" >> C:\Users\$env:Username\Desktop\export.csv
