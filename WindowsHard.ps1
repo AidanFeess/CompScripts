@@ -923,7 +923,7 @@ function Main {
 
         while($true) {
             Write-Host "[+] what would you like to do
-            - (fw) edit a firewall rule
+            - (efwrule) edit a firewall rule
             - (gpo) Change a group policy (TODO)
             - (chpwd) Change Password
             - (instls) Install Tools
@@ -941,7 +941,7 @@ function Main {
             $choice = Read-Host -Prompt "which mode do you want?"
             switch ($choice) {
 
-                "fw" {
+                "efwrule" {
                     [Int]$portNum = Read-Host -Prompt "which port (num)"
                     $action = Read-Host -Prompt "(allow) or (block)"
                     $direction = Read-Host -Prompt "which direction (in) or (out)"
@@ -991,7 +991,7 @@ function Main {
                     continue;
                     # TODO finish fun
 
-                    $punUser = Read-Host -Prompt "What user do you want to punish?"
+                    $runUser = Read-Host -Prompt "What user do you want to punish?"
                     while ($true) {
                         Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $runUser
                         Start-Sleep (5)
@@ -1018,24 +1018,20 @@ function Main {
                     # from Doggle, who was the best at hardening AD
 
                     # build the character array for generating the passwords
-                    $alph=@()
-                    65..122|foreach{$alph += [char]$_}
+                    $alph = @()
+                    65..122 | ForEach-Object{$alph += [char]$_}
                     $alph
 
-                    # just to help make things more random
-                    $alph = $alph | Get-Random -Shuffle
-
                     $users = Get-ADGroupMember -Identity 'Internals'
-                    $pass = Read-Host -Prompt "password" -AsSecureString
 
                     # take the users and generate their passwords and set them
                     # save them to a csv file for transport
                     foreach($user in $users){
-                        for($i = 0; $i -lt 21; $i++) { $pass = $alph | Get-Random }
+                        for($i = 0; $i -lt 20; $i++) { $pass += $alph | Get-Random }
                         ConvertTo-SecureString -AsPlainText $pass;
                         Set-ADAccountPassword -Identity $user -Reset -NewPassword $pass; 
                         $temp = $user.SamAccountName;
-                        echo "$temp,$pass" >> C:\Users\$env:Username\Desktop\export.csv
+                        Write-Output "$temp,$pass" >> $env:USERPROFILE\Desktop\export.csv
                     }
                 }
                 
