@@ -241,8 +241,8 @@ function WinFire {
 
 			if ($response -eq ("y")) {
 			
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
 
 				Write-Host "[+] ssh(22) blocked"
 
@@ -259,8 +259,8 @@ function WinFire {
 
 			if ($response -eq "y") {
 	
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
 
     			Write-Host "[+] vnc(5900) blocked"
 
@@ -277,8 +277,8 @@ function WinFire {
 
 			if ($response -eq "y") {
 	
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
 
     			Write-Host "[+] rdp(3389) blocked"
 	
@@ -289,41 +289,6 @@ function WinFire {
     		}
 		}
         
-        if ($x -eq 5985) {
-	
-    		$response = Read-Host -Prompt "Do you want to block WinRM http?"
-
-			if ($response -eq "y") {
-	
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-    			Write-Host "[+] WinRM(5985) blocked"
-	
-    		}else{
-	
-    			Write-Host "[+] WinRM(5985) will remain open"
-	
-    		}
-		}
-
-        if ($x -eq 5986) {
-	
-    		$response = Read-Host -Prompt "Do you want to block WinRM https?"
-
-			if ($response -eq "y") {
-	
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-    			Write-Host "[+] WinRM(5986) blocked"
-	
-    		}else{
-	
-    			Write-Host "[+] WinRM(5986) will remain open"
-	
-    		}
-		}
         # allow the port if it was previously listening
         New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Allow
 	}
@@ -740,16 +705,14 @@ function Harden {
 		$disableWinRm = Read-Host -Prompt "disable WinRm? (y)"
     	if ($disableWinRm -eq ("y")) {
             try {
-    		    Disable-PSRemoting -Force -ErrorAction Continue
+                Disable-PSRemoting -Force -ErrorAction Continue
+                New-NetFirewallRule -DisplayName "Block WinRMHTTP" -Protocol tcp -Direction Inbound -LocalPort 5985 -Action Block
+                New-NetFirewallRule -DisplayName "Block WinRMHTTPS" -Protocol tcp -Direction Outbound -LocalPort 5986 -Action Block
             } catch {
                 throw $_
             }
     	}
 
-
-		# change the password/username of the current admin user
-		ChangeCreds($mode)
-		
 
 		# setup UAC
 		SetUAC
@@ -804,6 +767,10 @@ function Harden {
 			$adapter.settcpipnetbios(0)
 		
         }
+
+
+		# change the password/username of the current admin user
+		ChangeCreds($mode)
 
 		
         # update windows if it is in the scope of the rules
