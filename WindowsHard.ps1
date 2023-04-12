@@ -985,6 +985,7 @@ function Main {
                     # from Doggle, who was the best at hardening AD
 
                     # build the character array for generating the passwords
+                    # TODO test $alph = foreach($i in 65..122) {[char]$i}
                     $alph = @()
                     65..122 | ForEach-Object{$alph += [char]$_}
                     $alph
