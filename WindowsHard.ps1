@@ -760,7 +760,7 @@ function Harden {
 
 
 		# disable netbios ??????(might be too good)
-		$adapters=(Get-WmiObject win32_networkadapterconfiguration )
+		$adapters=(Get-WmiObject win32_networkadapterconfiguration)
         foreach ($adapter in $adapters){
 		   
         	Write-Host $adapter
@@ -869,6 +869,7 @@ function Main {
     }else{ 
         Write-Host "No Red Team Allowed!!!"
         Write-Host "Hope You Have a Good Day!!!"
+        exit
     }
 
 
