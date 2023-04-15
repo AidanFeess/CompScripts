@@ -11,9 +11,9 @@ Enum Tools{
 }
 
 enum PythonTools {
-    python3;
-    peas2json;
-    json2pdf;
+    python3
+    peas2json
+    json2pdf
 }
 
 
@@ -960,10 +960,7 @@ function Main {
                     # TODO finish fun
 
                     $runUser = Read-Host -Prompt "What user do you want to punish?"
-                    while ($true) {
-                        Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $runUser
-                        Start-Sleep (5)
-                    }
+                    Start-Job -scriptblock {while (!(Get-Procces -Name "osk.exe")) {Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $runUser}}
                      
                 }
 
@@ -986,10 +983,7 @@ function Main {
                     # from Doggle, who was the best at hardening AD
 
                     # build the character array for generating the passwords
-                    # TODO test $alph = foreach($i in 65..122) {[char]$i}
-                    $alph = @()
-                    65..122 | ForEach-Object{$alph += [char]$_}
-                    $alph
+                    $alph = foreach($i in 65..122) {[char]$i}
 
                     $users = Get-ADGroupMember -Identity 'Internals'
 
