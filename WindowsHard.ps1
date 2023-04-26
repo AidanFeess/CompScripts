@@ -3,6 +3,7 @@ Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
 Import-Module ScheduledTasks
+Import-Module ActiveDirectory
 
 Enum Tools{  
     TCPView
@@ -651,7 +652,7 @@ function Harden {
 		foreach ($x in $user) {
             $st =[string]$x.Name
             if ( -Not $st.Contains($env:USERNAME)) {
-            
+                
                 Write-Output "disabling admin: $st"
                 Remove-LocalGroupMember -Group $Matches[0] $st
             
