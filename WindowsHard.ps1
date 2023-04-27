@@ -3,7 +3,6 @@ Import-Module NetSecurity
 Import-Module NetTCPIP
 Import-Module GroupPolicy
 Import-Module ScheduledTasks
-Import-Module ActiveDirectory
 
 Enum Tools{  
     TCPView
@@ -47,7 +46,6 @@ function InstallTools {
         try {
             Invoke-WebRequest $urls[$tool] -OutFile "$env:USERPROFILE\Desktop\Tools\$tool.zip" -ErrorAction Continue -ErrorVariable $DownTool
         }catch {
-
             Write-Output "[-] Error in downloading Tool, make sure you have internet access" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
             throw $_
         }
@@ -55,7 +53,6 @@ function InstallTools {
         try {
             Expand-Archive -LiteralPath "$zipPath[$tool]" -DestinationPath "$env:USERPROFILE\Desktop\Tools\$tool" -ErrorAction Continue -ErrorVariable $UNZIP
         } catch {
-            
             Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt"
             throw $_
         } 
@@ -88,6 +85,15 @@ function ToolStart {
         }
     }
 
+	Write-Host "[+] all tools opened"
+}
+
+# Downloads and runs winpeas on the system
+function Winpeas {
+    param (
+
+    )
+    
 	$runWinpeas = Read-Host -Prompt "Would you like to run Winpeas"
 	if ($runWinpeas -eq "y") {
 		
@@ -117,7 +123,6 @@ function ToolStart {
                 }
                     
                 if ($tools -eq [Tools].python3) {
-
                     # still need to manually install
                     Write-Host "[+] install python and make sure to add to your path"
                     Invoke-Expression -Command "$env:USERPROFILE\Desktop\Tools\python3.exe" 
@@ -141,7 +146,6 @@ function ToolStart {
         # open the pdf for viewing
         Start-Process ((Resolve-Path "C:\..\peas.pdf").Path)
 	}
-	Write-Host "[+] all tools opened"
 }
 
 
@@ -166,11 +170,8 @@ function ExchangeHard {
     }
 
     if ($mode = "undo") {
-
         # do the unhardening
     }
-
-    
 }
 
 
@@ -310,13 +311,13 @@ function EditFirewallRule {
 	)
 
 	Write-Host "[+] editing firewall rule..."
-	
-	Set-NetFirewallRule -DisplayName "$action $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status -ErrorVariable $EditRule -ErrorAction Continue
     
-    if ($EditRule) {
-
+    try {
+	    Set-NetFirewallRule -DisplayName "$action $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status 
+    }
+    catch {
+        throw $_
         Write-Output "[-] Error in editing firewall rule" | Out-File -FilePath "$env:USERPROFILE\Desktop\ErrLog.txt" -InputObject $errStr
-
     }
 
 	Write-Host "[+] changed firewall rule for $port"
@@ -898,6 +899,7 @@ function Main {
             - (instls) Install Tools
             - (strtls) Start Tools
             - (rmtls) Remove Tools
+            - (wp) Install & Run winpeas
             - (disc) Discovery
             - (scan) DefenderScan
             - (Undo) Undo
@@ -937,6 +939,8 @@ function Main {
                 "strtls" {ToolStart($toolsPath)}
 
                 "rmtls" {RemoveTools}
+
+                "wp" {Winpeas}
                 
                 "disc" {
                     Write-Host "Do you want to perform a dump (y) or (undo), 
@@ -982,6 +986,7 @@ function Main {
 
                 "blkpwd" {
                     # from Doggle, who was the best at hardening AD
+                    Import-Module ActiveDirectory
 
                     # build the character array for generating the passwords
                     $alph = foreach($i in 65..122) {[char]$i}
