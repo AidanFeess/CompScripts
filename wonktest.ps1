@@ -1,3 +1,7 @@
+#
+# Highly Experimental Prototype
+#
+
 # bad actions get a user wonked
 enum OffensiveActions {
     TRYADMINACCESS = 422
@@ -56,7 +60,7 @@ function Main {
 
         # gets all the users logged onto a computer
         # TODO fix not consistant
-        # TODO grab usernames 
+        # TODO parse for just usernames
         $loggedIn = Get-Process -IncludeUserName | Select-Object UserName, SessionId | Sort-Object -Unique
 
         # gather bad events for users
@@ -70,7 +74,6 @@ function Main {
         $sessionId = ((quser | Where-Object { $_ -match $badusername }) -split ' +')[2]
         logoff $sessionId
         Invoke-RDUserLogoff $sessionId
-
     }
 }
 
