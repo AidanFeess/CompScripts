@@ -16,6 +16,15 @@ enum PythonTools {
     json2pdf
 }
 
+function PrintErr {
+    param (
+        $ifError, $errString
+    )
+
+    if ($ifError) {
+        Write-Host "[-] $errString" -ForegroundColor Red
+    }
+}
 
 # install the list of tools
 function InstallTools {
@@ -41,20 +50,11 @@ function InstallTools {
     )
 
     foreach ($tool in $Tools) {
-        
-        try {
-            Invoke-WebRequest $urls[$tool] -OutFile "$env:USERPROFILE\Desktop\Tools\$tool.zip" -ErrorAction Continue
-        }catch {
-            Write-Output "[-] Error in downloading Tool, make sure you have internet access" -ForegroundColor Red
-            throw $_
-        }
+        Invoke-WebRequest $urls[$tool] -OutFile "$env:USERPROFILE\Desktop\Tools\$tool.zip"
+        PrintErr(!$?,"Error in downloading Tool, make sure you have internet access")
 
-        try {
-            Expand-Archive -LiteralPath "$zipPath[$tool]" -DestinationPath "$env:USERPROFILE\Desktop\Tools\$tool" -ErrorAction Continue
-        } catch {
-            Write-Output "[-] Error in unziping TCPView, make sure it was downloaded" -ForegroundColor Red
-            throw $_
-        } 
+        Expand-Archive -LiteralPath "$zipPath[$tool]" -DestinationPath "$env:USERPROFILE\Desktop\Tools\$tool"
+        PrintErr(!$?, "Error in unziping TCPView, make sure it was downloaded")
     }   
 	
 	Write-Host "[+] finished installing tools" -ForegroundColor Green
@@ -76,13 +76,9 @@ function ToolStart {
 
 	# open autoruns, procmon, TCPView
     foreach ($path in $paths) {
-        try {
-            Invoke-Expression -Command $path
-            Start-Sleep -Milliseconds 500
-        } catch {
-            throw $_
-            Write-Host "[-] Error in trying to start up tools" -ForegroundColor Red
-        }
+        Invoke-Expression -Command $path
+        Start-Sleep -Milliseconds 500
+        PrintErr(!$?, "Error in trying to start up tools")
     }
 
 	Write-Host "[+] all tools opened" -ForegroundColor Green
@@ -115,11 +111,8 @@ function Winpeas {
             )
 
             foreach ($tools in PythonTools) {
-                try {
-			        Invoke-Webrequest "$pythonList[$tools]" -Outfile "$env:USERPROFILE\Desktop\Tools\$tools"
-                } catch {
-                    throw $_
-                }
+			    Invoke-Webrequest "$pythonList[$tools]" -Outfile "$env:USERPROFILE\Desktop\Tools\$tools"
+                PrintErr(!$?, "Error while trying to download python and winpeas parsers")
                     
                 if ($tools -eq [Tools].python3) {
                     # still need to manually install
@@ -182,14 +175,11 @@ function WinUP {
 	Write-Host "[+] Setting up Windows Update..." -ForegroundColor Yellow
 	
 	# we will have to install this / need to make sure we can
-	Install-Module -Name PSWindowsUpdate -ErrorAction Continue -ErrorVariable $INSPSudpate
+	Install-Module -Name PSWindowsUpdate -ErrorAction Continue
 
-    if ($INSPSudpate) {
-        
+    if (!$?) {
         Write-Output "[-] Error in installing PSUpdate" -ForegroundColor Red
-
     }else{
-
 	    Import-Module PSWindowsUpdate
         
         Write-Host "[+] This will work in the background and will need to Reboot when finished" -ForegroundColor Yellow
@@ -197,7 +187,6 @@ function WinUP {
         # note this only installs the updates
         # it will help us control when we bring servers down for updates
 	    Get-WindowsUpdate -AcceptAll -Install
-
     }
 }
 
@@ -214,12 +203,8 @@ function WinFire {
 	Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogAllowed True -LogIgnored True -LogBlocked True -LogMaxSize 4096 -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
 	# get the current listening conections ports
-    try {
-        $a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen 
-    } catch {
-        throw $_
-        Write-Host "[-] Error in trying to gather the currently listening ports" -ForegroundColor Red
-    }
+    $a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen 
+    PrintErr(!$?, "Error in trying to gather the currently listening ports")
 
     # create the rule to block all unused ports and activate it later
     New-NetFirewallRule -DisplayName "Block all ports" -Direction Inbound -LocalPort Any -Action Block -Enabled False
@@ -247,9 +232,7 @@ function WinFire {
 				Write-Host "[+] ssh(22) blocked" -ForegroundColor Green
 
 			}else{
-
 				Write-Host "[+] ssh(22) will remain open" -ForegroundColor Green
-
 			}
 		}
 
@@ -265,15 +248,13 @@ function WinFire {
     			Write-Host "[+] vnc(5900) blocked" -ForegroundColor Green
 
 			}else{
-	
     			Write-Host "[+] vnc(5900) will remain open" -ForegroundColor Green
-	
     		}
 		}
 
 		if ($x -eq 3389) {
 	
-    		$response = $(Write-Host "Do you want to block rdp?: ") -ForegroundColor Magenta -NoNewline; Read-Host)
+    		$response = $(Write-Host "Do you want to block rdp?: " -ForegroundColor Magenta -NoNewline; Read-Host)
 
 			if ($response -eq "y") {
 	
@@ -283,9 +264,7 @@ function WinFire {
     			Write-Host "[+] rdp(3389) blocked" -ForegroundColor Green
 	
     		}else{
-	
     			Write-Host "[+] rdp(3389) will remain open" -ForegroundColor Green
-	
     		}
 		}
         
@@ -310,13 +289,8 @@ function EditFirewallRule {
 
 	Write-Host "[+] editing firewall rule..." -ForegroundColor Yellow
     
-    try {
-	    Set-NetFirewallRule -DisplayName "$action $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status 
-    }
-    catch {
-        throw $_
-        Write-Output "[-] Error in editing firewall rule" -ForegroundColor Red
-    }
+    Set-NetFirewallRule -DisplayName "$action $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status 
+    PrintErr(!$?, "Error in editing firewall rule")
 
 	Write-Host "[+] changed firewall rule for $port" -ForegroundColor Green
 }
@@ -331,13 +305,10 @@ function ChangeCreds {
     if ($mode -eq "control") {
         Write-Host "[+] You are now about to change your password" -ForegroundColor Yellow
 
-        $Password = ($Write-Host "Enter the new password: " -ForegroundColor Magenta -NoNewline; Read-Host -AsSecureString)
-        try {
+        $Password = $(Write-Host "Enter the new password: " -ForegroundColor Magenta -NoNewline; Read-Host -AsSecureString)
         Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password
-        } catch {
-            throw $_
-            Write-Host "[-] Error in changing password, checks docs to perform manual change" -ForegroundColor Red
-        }
+        PrintErr(!$?, "Error in changing password, checks docs to perform manual change")
+
         Write-Host "[+] changed password for ($env:Username)" -ForegroundColor Green
         Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT" -ForegroundColor Magenta
 
@@ -348,29 +319,24 @@ function ChangeCreds {
     Write-Host "[+] You are now about to change your password" -ForegroundColor Yellow
     $Password = Read-Host "Enter the new password" -AsSecureString
 
-    try {
     Get-LocalUser -Name "$env:Username" | Set-LocalUser -Password $Password
-    } catch {
-        throw $_
-        Write-Host "[-] Error in changing password, checks docs to perform manual change" -ForegroundColor Red
-    }
+    PrintErr(!$?, "Error in changing password, checks docs to perform manual change")
+
     Write-Host "[+] changed password for ($env:Username)" -ForegroundColor Green
     Write-Host "[+] MAKE SURE TO LOGOUT AND LOG BACK IN FOR THE CHANGE TO TAKE EFFECT" -ForegroundColor Magenta
 
 	Write-Host "[+] You are about to change the username of the current admin"
 	$newUsername = $(Write-Host "What is the new name?: " -ForegroundColor Magenta -NoNewline; Read-Host)
 
-    try {
-        Rename-LocalUser -Name "$env:Username" -NewName "$newUsername"
-    } catch {
-        throw $_
-        Write-Host "[-] Error while trying to change the username" -ForegroundColor Red
-    }
+    Rename-LocalUser -Name "$env:Username" -NewName "$newUsername"
+    PrintErr(!$?, "Error while trying to change the username")
+
     Write-Host "[+] New username set" -ForegroundColor Green
 }
 
 function  RemoveTools {
 	param (
+
 	)
 
 	Write-Host "[+] Removing the tools directory..." -ForegroundColor Yellow
@@ -405,12 +371,9 @@ function  RemoveTools {
     }
 
     # remove the directory with all of the installed tools in it
-    try {
-        Remove-Item -LiteralPath "$env:USERPROFILE\Desktop\Tools" -Force -Recurse
-    } catch {
-        throw $_
-        Write-Host "[-] Error while trying to remove the Tools directory" -ForegroundColor Red
-    }
+    Remove-Item -LiteralPath "$env:USERPROFILE\Desktop\Tools" -Force -Recurse
+    PrintErr(!$?, "Error while trying to remove the Tools directory")
+
 	Write-Host "[+] Deleted the tools directory" -ForegroundColor Green
 }
 
@@ -423,9 +386,7 @@ function Discovery {
 
     # note in this case removing the dump is = "undoing it"
     if ($mode -eq "undo") {
-        
 	    Remove-Item -LiteralPath "$discoverypath" -Force -Recurse 
-
     }
 
     if ($mode -eq "y") { 
@@ -435,7 +396,6 @@ function Discovery {
         if (Test-Path -Path "$env:USERPROFILE\Desktop\Discovery") {
 	    	continue;
     	}else{
-	
             New-Item -Path "$env:USERPROFILE\Desktop" -Name Discovery -type Directory
         }
 
@@ -510,9 +470,7 @@ function DefenderScan {
 		$preference = Get-MpPreference
 		
         foreach ($x in $preference.ExclusionPath) {
-			
             Remove-MpPreference -ExclusionPath $x
-		
         }
 
 		Write-Host "[+] running scan in the background..."
@@ -528,8 +486,7 @@ function DefenderScan {
 
 function EnableDefenderOn {
     param (
-        $mode,
-        $step
+        $mode, $step
     )
 
     # gather the status of WD
@@ -606,12 +563,9 @@ function Harden {
 
 		# install malwarebytes
 		Write-Host "[+] downloading malwarebytes..."
-        try {
-            Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe"
-        } catch {
-            throw $_
-            Write-Host "[-] Error while trying to download malwarebytes" -ForegroundColor Red
-        }
+
+        Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe"
+        PrintErr(!$?, "Error while trying to download malwarebytes")
         
 
 		# Run Malwarebytes
@@ -626,10 +580,8 @@ function Harden {
         # note this should not need undo because no guests accounts should be allowed
 		$user = Get-LocalGroupMember -Name "Guests" 
 		foreach ($j in $user) { 
-			
             Write-Output "disabling guest: $j" -ForegroundColor Green
 			Disable-LocalUser -Name $j
-		
         }
 		Write-Host "[+] guest accounts cleared" -ForegroundColor Green
 
@@ -654,10 +606,8 @@ function Harden {
 		foreach ($x in $user) {
             $st =[string]$x.Name
             if ( -Not $st.Contains($env:USERNAME)) {
-                
                 Write-Output "disabling admin: $st"
                 Remove-LocalGroupMember -Group $Matches[0] $st
-            
             }
         }
 		Write-Host "[+] pruned Administrator accounts" -ForegroundColor Green
@@ -666,21 +616,15 @@ function Harden {
 		# harden the firewall for remote or lan comps
 		$winFirewallOn = $(Write-Host "Do you want to turn on the windows firewall (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
 		if ($winFirewallOn -eq ("y")) {
-			
-			WinFire()
-		
+			WinFire
         }
 
 
 		$hardenExch = $(Write-Host "Do you want to Harden Exchange (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
 		if ($hardenExch -eq ("y")) {
-            
-            # looks for services that have "Exchange"
-            # seems to be the naming convention
+            # checking for services of exchange Exchange seems to work the best
             if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
-
                 ExchangeHard($mode)
-            
             }
 		}
 
@@ -697,12 +641,10 @@ function Harden {
 		# change the execution policy for powershell for admins only (works for the current machine)
 		# rest of restrictions happen in group policy and active directory
 		Write-Host "[+] changing powershell policy..." -ForegroundColor Yellow
-        try {
-            Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue
-        } catch {
-            throw $_
-            Write-Host "[-] Error in changing execution policy" -ForegroundColor Red
-        }
+
+        Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue
+        PrintErr(!$?, "Error in changing execution policy")
+
         Write-Host "[+] Execution policy was changed to restricted" -ForegroundColor Green
 	   
 
@@ -729,12 +671,8 @@ function Harden {
 		Write-Host "[+] disabling anonymous users..." -ForegroundColor Yellow
         $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous"
         if ($a.restrictanonymous -ne 1) {
-            try {
             Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous" -Value 1 -Force
-            } catch {
-                throw $_
-                Write-Host "[-] Error while trying to edit the registry key for anonymous logins" -ForegroundColor Red
-            }
+            PrintErr(!$?, "Error while trying to edit the registry key for anonymous logins")
         }
 		Write-Host "[+] disabled anonymous users" -ForegroundColor Green
 
@@ -743,12 +681,8 @@ function Harden {
         Write-Host "[+] disabling anonymous sam touching..." -ForegroundColor Yellow
         $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam"
         if ($a.restrictanonymoussam -ne 1) {
-            try {
             Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam" -Value 1 -Force
-            } catch {
-                throw $_
-                Write-Host "[-] Error while trying to edit the registry key for anonymous access to SAM" -ForegroundColor Red
-            }
+            PrintErr(!$?, "Error while trying to edit the registry key for anonymous access to SAM")
         }
         Write-Host "[+] touching SAM anonymously is disabled" -ForegroundColor Green
         
@@ -757,12 +691,8 @@ function Harden {
         Write-Host "[+] disabling regedit..." -ForegroundColor Yellow
         $a = Get-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools"
         if ($a.disableregistrytools -ne 2) {
-            try {
             Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools" -Value 2 -Force
-            } catch {
-                throw $_
-                Write-Host "[-] Error while trying to disable access to regedit" -ForegroundColor Red
-            }
+            PrintErr(!$?, "Error while trying to disable access to regedit")
         }
         Write-Host "[+] registry editing via tools disabled" -ForegroundColor Green
 
@@ -772,10 +702,8 @@ function Harden {
 		# disable netbios ??????(might be too good)
 		$adapters=(Get-WmiObject win32_networkadapterconfiguration)
         foreach ($adapter in $adapters){
-		   
         	Write-Host $adapter
 			$adapter.settcpipnetbios(0)
-		
         }
 
 
@@ -827,14 +755,11 @@ function Undo {
         }
 
         "Psh" {
-
             Write-Host "[+] changing powershell policy..." -ForegroundColor Yellow
-            try {
-                Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope LocalMachine -Confirm
-            } catch {
-                throw $_
-                Write-Output "[-] Error in changing the execution policy to Undefined" -ForegroundColor Red
-            }
+            
+            Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope LocalMachine -Confirm
+            PrintErr(!$?, "Error in changing the execution policy to Undefined")
+
             Write-Host "[+] Changed the Powershell policy to Undefined" -ForegroundColor Green
         }
 
@@ -844,12 +769,9 @@ function Undo {
             $enableWinRm = $(Write-Host "enable WinRM? (y) or (n), WARNING his will make your machine vulnerable to RCE: " -ForegroundColor Magenta -NoNewline; Read-Host)
         
             if ($enableWinRm -eq ("y")) {
-                try {
-                    Enable-PSRemoting -Force -Confirm
-                } catch {
-                    throw $_
-                    Write-Host "[-] Error in Enabling WinRM" -ForegroundColor Red
-                }
+                Enable-PSRemoting -Force -Confirm
+                PrintErr(!$?, "[-] Error in Enabling WinRM")
+                    
                 Write-Host "[+] Enabled WinRm" -ForegroundColor Green
             }
         }
@@ -959,20 +881,16 @@ function Main {
                 "scan" {DefenderScan}
 
                 "Undo" {
-                    
                     Write-Host "Remember that functions already exist that can undo like RemoveTools" -ForegroundColor Yellow
                     Undo
-
                 }
 
                 "OSK" {
-                    
                     continue;
                     # TODO finish fun
 
                     $runUser = $(Write-Host "What user do you want to punish?: " -ForegroundColor Magenta -NoNewline; Read-Host)
                     Start-Job -scriptblock {while (!(Get-Procces -Name "osk.exe")) {Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $runUser}}
-                     
                 }
 
                 "Wonk" {
@@ -992,6 +910,13 @@ function Main {
                 }
 
                 "blkpwd" {
+                    # "ADDS" is the main service of AD so it should be in all instances of AD
+                    if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Active Directory Domain Services" == $true) {
+                       Write-Host "[-] Active Directory is not running on this system" -ForegroundColor Yellow
+                       Write-Host "if you are trying to change local passwords then use the accounts menu in the control panel" -ForegroundColor Yellow
+                       continue
+                    }
+
                     # from Doggle, who was the best at hardening AD
                     Import-Module ActiveDirectory
 
