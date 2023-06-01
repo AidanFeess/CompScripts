@@ -1,6 +1,7 @@
 #
 # Highly Experimental Prototype
 #
+Import-Module EventTracingManagement
 
 # bad actions get a user wonked
 enum OffensiveActions {
@@ -43,12 +44,12 @@ function Eventlog {
     $results | Select-Object Time, User, Access | Export-Csv -NoTypeInformation -Path .\Access_Log.csv
 }
 
-
 function Main {
     param (
 
     )
 
+    Persistance
     # all of this might need to be multithreaded
 
     # gather users on the system
