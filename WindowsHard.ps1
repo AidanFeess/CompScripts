@@ -4,7 +4,7 @@ Import-Module NetTCPIP
 Import-Module GroupPolicy
 Import-Module ScheduledTasks
 
-Enum Tools{  
+enum Tools{  
     TCPView
     Procmon
     Autoruns
@@ -138,15 +138,6 @@ function Winpeas {
     }
 }
 
-
-# edit and configure group policy
-function EditGPO {
-    param (
-
-    )
-}
-
-
 # perform tasks to harden Exchange
 function ExchangeHard {
     param (
@@ -203,19 +194,21 @@ function WinFire {
     Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled True -DefaultInboundAction Allow -DefaultOutboundAction Allow -NotifyOnListen True -LogAllowed True -LogIgnored True -LogBlocked True -LogMaxSize 4096 -LogFileName %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log
 
     # get the current listening conections ports
-    $a = Get-NetTCPConnection -State Listen | Select-Object -Property LocalPort -ErrorVariable $GetListen 
+    $listening = Get-NetTCPConnection -State Listen, Established | Select-Object -Property LocalPort
+    $allports = Get-NetTCPConnection | Select-Object -Property LocalPort
+
     PrintErr(!$?, "Error in trying to gather the currently listening ports")
 
     # create the rule to block all unused ports and activate it later
-    New-NetFirewallRule -DisplayName "Block all ports" -Direction Inbound -LocalPort Any -Action Block -Enabled False
+    # New-NetFirewallRule -DisplayName "Block all ports" -Direction Inbound -LocalPort Any -Action Block -Enabled False
     
     Write-Host "[+] You are possibly going to be asked if you want to block certain ports" -ForegroundColor Green
-    Write-Host "[+] your options are ( y ) or ( n )" -ForegroundColor Green
+    Write-Host "your options are ( y ) or ( n )" -ForegroundColor Yellow
 
-    # parse the list to remove ports that shouldn't be open
-    for ($x = 0; $x -lt ($a.Length - 1); $x++) {
-        
-        $portNum = $a[$x].LocalPort
+    # parse the list to block common remote access ports
+    for ($x = 0; $x -lt ($allports.Length - 1); $x++) {
+
+        $portNum = $allports[$x].LocalPort
 
         # uncomment for debug
         # Write-Host "$portNum"
@@ -230,9 +223,13 @@ function WinFire {
                 New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
 
                 Write-Host "[+] ssh(22) blocked" -ForegroundColor Green
+                continue
 
             }else{
+
                 Write-Host "[+] ssh(22) will remain open" -ForegroundColor Green
+                continue
+
             }
         }
 
@@ -247,8 +244,13 @@ function WinFire {
 
                 Write-Host "[+] vnc(5900) blocked" -ForegroundColor Green
 
+                continue
+
             }else{
+
                 Write-Host "[+] vnc(5900) will remain open" -ForegroundColor Green
+                continue
+
             }
         }
 
@@ -262,14 +264,22 @@ function WinFire {
                 New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
 
                 Write-Host "[+] rdp(3389) blocked" -ForegroundColor Green
+                continue
     
             }else{
+
                 Write-Host "[+] rdp(3389) will remain open" -ForegroundColor Green
+                continue
+
             }
         }
         
-        # allow the port if it was previously listening
-        New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Allow
+        # allow the port is it is currently being used
+        if ($allports[$x].LocalPort -in $listening) {
+            New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Allow
+        } else {
+            New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+        }
     }
 
     # activate the rule from earlier
@@ -499,7 +509,7 @@ function EnableDefenderOn {
     
         if ($turnDefenderOn -eq "y") {
         
-            Write-Host "[+] Enabling Windows Defender..." -ForegroundColor Yellow
+            Write-Host "Enabling Windows Defender..." -ForegroundColor Yellow
 
             Set-MpPreference -DisableRealtimeMonitoring $false
             Set-MpPreference -DisableIOAVProtection $false
@@ -602,6 +612,7 @@ function Harden {
         $adminGroup -match '(?<==)[\w]+'
 
         # note this should not need undo because it only removes the account from the Administrators group
+        # TODO need further testing
         $user = Get-LocalGroupMember -Name $Matches[0]
         foreach ($x in $user) {
             $st =[string]$x.Name
@@ -630,7 +641,7 @@ function Harden {
 
 
         # turn on Windows Defender
-        # Windows 8.1 (server 2016+) should already be on
+        # note Windows 8.1 (server 2016+) should already be on
         EnableDefenderOn($mode, $step)
         
 
@@ -638,7 +649,7 @@ function Harden {
         ToolStart ($toolsPath)
 
 
-        # change the execution policy for powershell for admins only (works for the current machine)
+        # change the execution policy for powershell for admins only (works only for the current machine)
         # rest of restrictions happen in group policy and active directory
         Write-Host "[+] changing powershell policy..." -ForegroundColor Yellow
 
@@ -687,7 +698,7 @@ function Harden {
         Write-Host "[+] touching SAM anonymously is disabled" -ForegroundColor Green
         
         # disable editing of the registry through tools
-        # warning this will stop a user from editing the registry all together
+        # note warning this will stop a user from editing the registry all together
         Write-Host "[+] disabling regedit..." -ForegroundColor Yellow
         $a = Get-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools"
         if ($a.disableregistrytools -ne 2) {
@@ -726,7 +737,7 @@ function Undo {
         [String]$mode = "undo"
 
         Write-Host "
-        - (#) To uninstall all tool installed use RemoveTools in the control menu
+        - (#) To uninstall all installed tools use RemoveTools in the control menu
         - (Exchange) Exchange(TODO)
         - (Defender) Windows Defender
         - (Psh) Psh Policy
