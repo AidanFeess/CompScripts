@@ -559,181 +559,202 @@ function EnableDefenderOn {
     }
 }
 
+function Enable-PSScriptBlockLogging {
+    $basepath = @(
+        'hklm:\software\policies\microsoft\windows'
+        'powershell\scriptblocklogging'
+    ) -join '\'
+
+    if (-not (test-path $basepath)) {
+        $null = new-item $basepath -force
+    }
+
+    Set-ItemProperty $basePath -Name EnableScriptBlockLogging -Value "1"
+}
+
 
 function Harden {
     param (
-       $mode
+
     )
-        
-        # check if the Tools folder is already created
-        Write-Host "[+] Checking to see if the tools are installed..." -ForegroundColor Green
-        if (Test-Path -Path "$env:USERPROFILE\Desktop\Tools") {
-            continue
-        } else {
-            InstallTools
+
+    [String]$mode = "harden"
+    
+    # check if the Tools folder is already created
+    Write-Host "[+] Checking to see if the tools are installed..." -ForegroundColor Green
+    if (Test-Path -Path "$env:USERPROFILE\Desktop\Tools") {
+        continue
+    } else {
+        InstallTools
+    }
+
+    # install malwarebytes
+    Write-Host "[+] Downloading malwarebytes..." -ForegroundColor Green
+
+    Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe"
+    PrintErr(!$?, "Error while trying to download malwarebytes")
+    
+
+    # Run Malwarebytes
+    Write-Host "[i] Click to install the software" -ForegroundColor Yellow
+    Invoke-Expression "$env:USERPROFILE\Desktop\Tools\mb.exe"
+
+    Start-Sleep -Milliseconds 1000
+    
+    #Long but disables all guests
+    Write-Host "[+] Clearing out guest accounts..." -ForegroundColor Green
+
+    # note this should not need undo because no guests accounts should be allowed
+    $user = Get-LocalGroupMember -Name "Guests" 
+    foreach ($j in $user) { 
+        Write-Output "[i] Disabling guest: $j" -ForegroundColor Yellow
+        Disable-LocalUser -Name $j
+    }
+    Write-Host "[+] Guest accounts cleared" -ForegroundColor Green
+
+    # remove all the non-required admin accounts
+    Write-Host "[+] Removing all admin accounts...execpt yours" -ForegroundColor Green
+
+    # read the groups and select the correct admin group
+    $a = Get-LocalGroup | Select-Object -Property "Name" | Select-String -Pattern "admin"
+    Write-Host "$a"
+    [Int]$c = $(Write-Host "[?] Which one is the real admin group: " -ForegroundColor Magenta -NoNewline; Read-Host)
+    foreach ($i in $a) {
+        if ($i -eq $a[$c]) {
+            [String]$adminGroup = $i
         }
+    }
 
-        # install malwarebytes
-        Write-Host "[+] Downloading malwarebytes..." -ForegroundColor Green
+    # grabs the group name from the object
+    $adminGroup -match '(?<==)[\w]+'
 
-        Invoke-WebRequest "https://downloads.malwarebytes.com/file/mb-windows" -OutFile "$env:USERPROFILE\Desktop\Tools\mb.exe"
-        PrintErr(!$?, "Error while trying to download malwarebytes")
-        
-
-        # Run Malwarebytes
-        Write-Host "[i] Click to install the software" -ForegroundColor Yellow
-        Invoke-Expression "$env:USERPROFILE\Desktop\Tools\mb.exe"
-
-        Start-Sleep -Milliseconds 1000
-        
-        #Long but disables all guests
-        Write-Host "[+] Clearing out guest accounts..." -ForegroundColor Green
-
-        # note this should not need undo because no guests accounts should be allowed
-        $user = Get-LocalGroupMember -Name "Guests" 
-        foreach ($j in $user) { 
-            Write-Output "[i] Disabling guest: $j" -ForegroundColor Yellow
-            Disable-LocalUser -Name $j
+    # note this should not need undo because it only removes the account from the Administrators group
+    # TODO need further testing
+    $user = Get-LocalGroupMember -Name $Matches[0]
+    foreach ($x in $user) {
+        $st =[string]$x.Name
+        if ( -Not $st.Contains($env:USERNAME)) {
+            Write-Host "[i] Disabling admin: $st" -ForegroundColor Yellow
+            Remove-LocalGroupMember -Group $Matches[0] $st
         }
-        Write-Host "[+] Guest accounts cleared" -ForegroundColor Green
+    }
+    Write-Host "[+] Pruned Administrator accounts" -ForegroundColor Green
 
-        # remove all the non-required admin accounts
-        Write-Host "[+] Removing all admin accounts...execpt yours" -ForegroundColor Green
 
-        # read the groups and select the correct admin group
-        $a = Get-LocalGroup | Select-Object -Property "Name" | Select-String -Pattern "admin"
-        Write-Host "$a"
-        [Int]$c = $(Write-Host "[?] Which one is the real admin group: " -ForegroundColor Magenta -NoNewline; Read-Host)
-        foreach ($i in $a) {
-            if ($i -eq $a[$c]) {
-                [String]$adminGroup = $i
-            }
+    # harden the firewall for remote or lan comps
+    $winFirewallOn = $(Write-Host "[?] Do you want to turn on the windows firewall (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
+    if ($winFirewallOn -eq ("y")) {
+        WinFire
+    }
+
+
+    $hardenExch = $(Write-Host "[?] Do you want to Harden Exchange (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
+    if ($hardenExch -eq ("y")) {
+        # checking for services of exchange Exchange seems to work the best
+        if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
+            ExchangeHard($mode)
         }
+    }
 
-        # grabs the group name from the object
-        $adminGroup -match '(?<==)[\w]+'
 
-        # note this should not need undo because it only removes the account from the Administrators group
-        # TODO need further testing
-        $user = Get-LocalGroupMember -Name $Matches[0]
-        foreach ($x in $user) {
-            $st =[string]$x.Name
-            if ( -Not $st.Contains($env:USERNAME)) {
-                Write-Host "[i] Disabling admin: $st" -ForegroundColor Yellow
-                Remove-LocalGroupMember -Group $Matches[0] $st
-            }
+    # turn on Windows Defender
+    # note Windows 8.1 (server 2016+) should already be on
+    EnableDefenderOn($mode, $step)
+    
+
+    # start all the installed tools to find any possible weird things running
+    ToolStart ($toolsPath)
+
+
+    # change the execution policy for powershell for admins only (works only for the current machine)
+    # rest of restrictions happen in group policy and active directory
+    Write-Host "[+] Changing powershell policy..." -ForegroundColor Green
+
+    Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue
+    PrintErr(!$?, "Error in changing execution policy")
+
+    Write-Host "[+] Execution policy was changed to restricted" -ForegroundColor Green
+    
+
+    # disable WinRM
+    $disableWinRm = $(Write-Host "[?] Disable WinRm? (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
+    if ($disableWinRm -eq ("y")) {
+        try {
+            Disable-PSRemoting -Force -ErrorAction Continue
+            New-NetFirewallRule -DisplayName "Block WinRMHTTP" -Protocol tcp -Direction Inbound -LocalPort 5985 -Action Block
+            New-NetFirewallRule -DisplayName "Block WinRMHTTPS" -Protocol tcp -Direction Outbound -LocalPort 5986 -Action Block
+        } catch {
+            throw $_
+            Write-Host "[-] Error while trying to disable WinRM" -ForegroundColor Red
         }
-        Write-Host "[+] Pruned Administrator accounts" -ForegroundColor Green
+    }
+    Write-Host "[+] WinRM disabled" -ForegroundColor Green
 
 
-        # harden the firewall for remote or lan comps
-        $winFirewallOn = $(Write-Host "[?] Do you want to turn on the windows firewall (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
-        if ($winFirewallOn -eq ("y")) {
-            WinFire
-        }
+    # setup UAC
+    SetUAC
 
 
-        $hardenExch = $(Write-Host "[?] Do you want to Harden Exchange (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
-        if ($hardenExch -eq ("y")) {
-            # checking for services of exchange Exchange seems to work the best
-            if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
-                ExchangeHard($mode)
-            }
-        }
+    # disable anonymous logins
+    Write-Host "[+] Disabling anonymous users..." -ForegroundColor Green
+    $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous"
+    if ($a.restrictanonymous -ne 1) {
+        Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous" -Value 1 -Force
+        PrintErr(!$?, "Error while trying to edit the registry key for anonymous logins")
+    }
+    Write-Host "[+] Disabled anonymous users" -ForegroundColor Green
+
+    
+    # disable anonymous sam
+    Write-Host "[+] Disabling anonymous SAM touching..." -ForegroundColor Green
+    $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam"
+    if ($a.restrictanonymoussam -ne 1) {
+        Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam" -Value 1 -Force
+        PrintErr(!$?, "Error while trying to edit the registry key for anonymous access to SAM")
+    }
+    Write-Host "[+] Touching SAM anonymously is disabled" -ForegroundColor Green
+    
+    # disable editing of the registry through tools
+    # note warning this will stop a user from editing the registry all together
+    Write-Host "[+] Disabling regedit..." -ForegroundColor Green
+    $a = Get-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools"
+    if ($a.disableregistrytools -ne 2) {
+        Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools" -Value 2 -Force
+        PrintErr(!$?, "Error while trying to disable access to regedit")
+    }
+    Write-Host "[+] Registry editing via tools disabled" -ForegroundColor Green
+
+    # TODO enable/install wdac/applocker/or DeepBlue CLi?
 
 
-        # turn on Windows Defender
-        # note Windows 8.1 (server 2016+) should already be on
-        EnableDefenderOn($mode, $step)
-        
+    # disable netbios ??????(might be too good)
+    $adapters=(Get-WmiObject win32_networkadapterconfiguration)
+    foreach ($adapter in $adapters){
+        Write-Host $adapter
+        $adapter.settcpipnetbios(0)
+    }
 
-        # start all the installed tools to find any possible weird things running
-        ToolStart ($toolsPath)
+    # configure SMB to report connections to SMBv1 server
+    Set-SmbServerConfiguration -AuditSmb1Access $true
 
+    # Enable logging for powershell, very powerfull if we can use it
+    # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_logging?view=powershell-5.1
+    Enable-PSScriptBlockLogging
 
-        # change the execution policy for powershell for admins only (works only for the current machine)
-        # rest of restrictions happen in group policy and active directory
-        Write-Host "[+] Changing powershell policy..." -ForegroundColor Green
-
-        Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -ErrorAction Continue
-        PrintErr(!$?, "Error in changing execution policy")
-
-        Write-Host "[+] Execution policy was changed to restricted" -ForegroundColor Green
-       
-
-        # disable WinRM
-        $disableWinRm = $(Write-Host "[?] Disable WinRm? (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
-        if ($disableWinRm -eq ("y")) {
-            try {
-                Disable-PSRemoting -Force -ErrorAction Continue
-                New-NetFirewallRule -DisplayName "Block WinRMHTTP" -Protocol tcp -Direction Inbound -LocalPort 5985 -Action Block
-                New-NetFirewallRule -DisplayName "Block WinRMHTTPS" -Protocol tcp -Direction Outbound -LocalPort 5986 -Action Block
-            } catch {
-                throw $_
-                Write-Host "[-] Error while trying to disable WinRM" -ForegroundColor Red
-            }
-        }
-        Write-Host "[+] WinRM disabled" -ForegroundColor Green
-
-
-        # setup UAC
-        SetUAC
-
-
-        # disable anonymous logins
-        Write-Host "[+] Disabling anonymous users..." -ForegroundColor Green
-        $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous"
-        if ($a.restrictanonymous -ne 1) {
-            Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymous" -Value 1 -Force
-            PrintErr(!$?, "Error while trying to edit the registry key for anonymous logins")
-        }
-        Write-Host "[+] Disabled anonymous users" -ForegroundColor Green
-
-        
-        # disable anonymous sam
-        Write-Host "[+] Disabling anonymous SAM touching..." -ForegroundColor Green
-        $a = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam"
-        if ($a.restrictanonymoussam -ne 1) {
-            Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\ -Name "restrictanonymoussam" -Value 1 -Force
-            PrintErr(!$?, "Error while trying to edit the registry key for anonymous access to SAM")
-        }
-        Write-Host "[+] Touching SAM anonymously is disabled" -ForegroundColor Green
-        
-        # disable editing of the registry through tools
-        # note warning this will stop a user from editing the registry all together
-        Write-Host "[+] Disabling regedit..." -ForegroundColor Green
-        $a = Get-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools"
-        if ($a.disableregistrytools -ne 2) {
-            Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies -Name "disableregistrytools" -Value 2 -Force
-            PrintErr(!$?, "Error while trying to disable access to regedit")
-        }
-        Write-Host "[+] Registry editing via tools disabled" -ForegroundColor Green
-
-        # TODO enable/install wdac/applocker/or DeepBlue CLi?
-
-
-        # disable netbios ??????(might be too good)
-        $adapters=(Get-WmiObject win32_networkadapterconfiguration)
-        foreach ($adapter in $adapters){
-            Write-Host $adapter
-            $adapter.settcpipnetbios(0)
-        }
-
-
-        # change the password/username of the current admin user
-        ChangeCreds($mode)
-
-        
-        # update windows if it is in the scope of the rules
-        $updates = $(Write-Host "[?] Do you want to update (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
-        
-        if ($updates -eq ("y")) {
-            WinUP
-        }
+    # change the password/username of the current admin user
+    ChangeCreds($mode)
+    
+    # update windows if it is in the scope of the rules
+    $updates = $(Write-Host "[?] Do you want to update (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
+    
+    if ($updates -eq ("y")) {
+        WinUP
+    }
 }
 
 function Undo {
     param (
+
     )
 
         [String]$mode = "undo"
@@ -745,6 +766,7 @@ function Undo {
         - (Psh) Psh Policy
         - (WinRm) Enable WinRM(why?????)
         - (netbios) re-enable netbios(TODO)
+        - (SMB) re-enable SMBv1
         "
 
         [Int]$step = $(Write-Host "[?] What step do you want to undo: " -ForegroundColor Magenta -NoNewline; Read-Host)
@@ -790,6 +812,10 @@ function Undo {
         }
 
         "netbios" { continue }
+        
+        "SMB" {
+            HardenSMB($mode)
+        }
 
         default { continue }
     }
@@ -947,23 +973,23 @@ function Main {
                     Write-Host "[+] Starting up Wonk..." -ForegroundColor Green
 
                     # TODO test and make sure this starts as intended
-                    Start-Process .\bin\release\net7.0\wonk.exe
+                    # Start-Process .\bin\release\net7.0\wonk.exe
+
+                    # create a class for Wonk
+                    $params = @{
+                        Name = "Wonk"
+                        BinaryPathName = "$env:USERPROFILE\Desktop\Wonk\.bin\release\net7.0\wonk.exe"
+                        DisplayName = "Wonk Service"
+                        StartupType = "AutomaticDelayedStart"
+                    }
+
+                    New-Service @params
+
+                    Start-Service -Name "Wonk"
+
                     PrintErr(!$?,"Error in starting Wonk, make sure you have right privs")
 
                     Write-Host "[+] Wonk is running" -ForegroundColor Green
-
-                    Write-Host "[+] Creating the scheduled task..." -ForegroundColor Green
-                    # creates the scheduled task for wonk persistance
-                    $action = New-ScheduledTaskAction -Execute "powershell.exe if (Get-Procces -Name wonk.exe) {}else{.\wonk.exe}"
-                    $trigger = New-ScheduledTaskTrigger -RepetitionInterval 1mins
-                    $principal = New-ScheduledTaskPrincipal -RequiredPrivilege "Administrator"
-                    $settings = New-ScheduledTaskSettingsSet -Hidden
-                    $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
-
-                    Register-ScheduledTask "wakeup" -InputObject $task
-                    PrintErr(!$?,"Error in creating scheduled task, make sure you have right privs")
-
-                    Write-Host "[+] Created the scheduled task" -ForegroundColor Green
                 }
 
                 "blkpwd" {
