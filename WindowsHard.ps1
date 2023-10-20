@@ -941,15 +941,15 @@ function Main {
 
                     # download the version of dotnet required to run wonk
                     # note installing the sdk also installs the runtime
-                    Write-Host "[+] Installing the verion of .net sdk that is required..." -ForegroundColor Green
+                    # Write-Host "[+] Installing the verion of .net sdk that is required..." -ForegroundColor Green
 
-                    Invoke-WebRequest "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-7.0.202-windows-x64-installer" -OutFile "$env:Userprofile\Desktop\Tools\dotnet7.exe"
-                    PrintErr(!$?,"Error in downloading dotnet installer, make sure you have internet access")
+                    # Invoke-WebRequest "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-7.0.202-windows-x64-installer" -OutFile "$env:Userprofile\Desktop\Tools\dotnet7.exe"
+                    # PrintErr(!$?,"Error in downloading dotnet installer, make sure you have internet access")
 
-                    Invoke-Expression "$env:USERPROFILE\Desktop\Tools\dotnet7.exe"
-                    PrintErr(!$?,"Error in running dotnet installer, make sure you have right privs")
+                    # Invoke-Expression "$env:USERPROFILE\Desktop\Tools\dotnet7.exe"
+                    # PrintErr(!$?,"Error in running dotnet installer, make sure you have right privs")
 
-                    Write-Host "[+] .net sdk installed" -ForegroundColor Green
+                    # Write-Host "[+] .net sdk installed" -ForegroundColor Green
                     
                     # need to refresh the path again to use the cli
                     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
