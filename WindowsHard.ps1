@@ -49,7 +49,8 @@ function InstallTools {
         [Tools]::Autoruns = "$env:USERPROFILE\Desktop\Tools\Autoruns.zip"
     }
 
-    foreach ($tool in [Tools].GetEnumValues()) {
+    # should do this whole thing in parallel
+    foreach -parallel ($tool in [Tools].GetEnumValues()) {
         Invoke-WebRequest -Uri $urls[$tool].ToString() -OutFile "$env:USERPROFILE\Desktop\Tools\$tool.zip"
         PrintErr(!$?,"Error in downloading Tool, make sure you have internet access")
 
@@ -95,7 +96,7 @@ function Winpeas {
         
         # download and run winpeas in memory
         $url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
-        $wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log") > "$env:USERPROFILE\Desktop\Tools\winpeas.txt"
+        $wp = [System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("log") > "$env:USERPROFILE\Desktop\Tools\winpeas.txt"
 
         # execute the parsers to convert to pdf
         $installPython = $(Write-Host "[?] Would you like to install Python?: " -ForegroundColor Magenta -NoNewline; Read-Host)
@@ -110,7 +111,8 @@ function Winpeas {
                 [PyTools]::json2pdf  = "https://github.com/carlospolop/PEASS-ng/blob/master/parsers/json2pdf.py"  
             }
 
-            foreach ($tools in [PyTools].GetEnumValues()) {
+            # should do this whole thing in parallel
+            foreach -parallel ($tools in [PyTools].GetEnumValues()) {
                 Invoke-Webrequest $pythonList[$tools].ToString() -Outfile "$env:USERPROFILE\Desktop\Tools\$tools"
                 PrintErr(!$?, "Error while trying to download python and winpeas parsers")
                     
@@ -282,6 +284,14 @@ function WinFire {
         } else {
             New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
         }
+
+        $FirewallProgress= @{
+            Activity         = 'Configuring Firewall'
+            Status           = 'Progress'
+            PercentComplete  = $x
+            CurrentOperation = "port: $x"
+        }
+        Write-Progress @InnerLoopProgressParameters
     }
 
     # activate the rule from earlier
@@ -1016,6 +1026,13 @@ function Main {
                         Set-ADAccountPassword -Identity $user -Reset -NewPassword $pass; 
                         PrintErr(!$?,"Error in changing the password for $user, make sure you have right privs")
                         $temp = $user.SamAccountName;
+                        $PasswordProgress = @{
+                                Activity         = 'Changing Password'
+                                PercentComplete  = $j
+                                Status           = 'Progress'
+                                CurrentOperation = "$user"
+                        }
+                        Write-Progress @PasswordProgress
                         Write-Output "$temp,$pass" >> $env:USERPROFILE\Desktop\export.csv
                     }
 
