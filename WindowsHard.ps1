@@ -439,7 +439,9 @@ function Discovery {
         Get-ScheduledTask -Verbose | Format-Table -AutoSize > "$discoverypath\scheduledtasks.txt"
 
         Write-Host "[+] Gathering any startup apps..." -ForegroundColor Green
-        Get-StartApps | Format-Table -AutoSize > "$discoverypath\startupapps.txt"
+        Get-CimInstance Win32_StartupCommand |
+        Select-Object Name, command, Location, User |
+        Format-Table -AutoSize > "$discoverypath\startupapps.txt"
 
         Write-Host "[+] Gathering list of users for diff..." -ForegroundColor Green
         Get-ADGroupMember | Format-Table -AutoSize > "$discoverypath\lsadusrs.txt"
@@ -878,7 +880,6 @@ function Main {
         while($true) {
             Write-Host "[?] What would you like to do
             - (efwrule) edit a firewall rule
-            - (gpo) Change a group policy (TODO)
             - (chpwd) Change Password
             - (instls) Install Tools
             - (strtls) Start Tools
@@ -888,8 +889,7 @@ function Main {
             - (scan) DefenderScan
             - (Undo) Undo
             - (OSK) OSK Spawn
-            - (Wonk) Start Wonk (???)
-            - (blkpwd) Bulk Password Change (AD)
+            - (Wonk) Start Wonk
             - quit
             " 
             
@@ -903,13 +903,6 @@ function Main {
                     [Bool]$status = $(Write-Host "[?] To create the rule use true or false: " -ForegroundColor Magenta -NoNewline; Read-Host)
                     
                     EditFirewallRule ($portNum, $action, $direction, $status)
-                }
-
-                "gpo" {
-
-                    continue
-
-                    # TODO populate this with stuff after group policy is added
                 }
 
                 "chpwd" {
@@ -1002,43 +995,6 @@ function Main {
                     Write-Host "[+] Wonk is running" -ForegroundColor Green
                 }
 
-                "blkpwd" {
-                    # "ADDS" is the main service of AD so it should be in all instances of AD
-                    if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Active Directory Domain Services" == $true) {
-                       Write-Host "[i] Active Directory is not running on this system" -ForegroundColor Yellow
-                       Write-Host "[i] If you are trying to change local passwords then use the accounts menu in the control panel" -ForegroundColor Yellow
-                       continue
-                    }
-
-                    # from Doggle, who was the best at hardening AD
-                    Import-Module ActiveDirectory
-
-                    Write-Host "[+] Changing all of the passwords and writing them to a csv..." -ForegroundColor Green
-                    # build the character array for generating the passwords
-                    $alph = foreach($i in 65..122) {[char]$i}
-
-                    $users = Get-ADGroupMember -Identity 'Internals'
-
-                    # generate the users new passwords and save them to a csv file
-                    foreach($user in $users) {
-                        for($i = 0; $i -lt 20; $i++) { $pass += $alph | Get-Random }
-                        ConvertTo-SecureString -AsPlainText $pass;
-                        Set-ADAccountPassword -Identity $user -Reset -NewPassword $pass; 
-                        PrintErr(!$?,"Error in changing the password for $user, make sure you have right privs")
-                        $temp = $user.SamAccountName;
-                        $PasswordProgress = @{
-                                Activity         = 'Changing Password'
-                                PercentComplete  = $j
-                                Status           = 'Progress'
-                                CurrentOperation = "$user"
-                        }
-                        Write-Progress @PasswordProgress
-                        Write-Output "$temp,$pass" >> $env:USERPROFILE\Desktop\export.csv
-                    }
-
-                    Write-Host "[+] Bulk password change is complete and csv file is located on your desktop" -ForegroundColor Green
-                }
-                
                 "quit" {return}
 
                 default {continue}
