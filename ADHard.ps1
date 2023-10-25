@@ -1,12 +1,42 @@
 Import-Module ActiveDirectory 
 
+# perform all the harding steps from the docs
+# TODO look into running hardening script on all machines in network
 function Harden {
     param (
     
     )
+    
+    $Cred = Get-Credential
+
+    comp_names = @(Get-ADComputer | Select-Object -Property Name)
+
+    # should run WindowsHard on all computers that are listed
+    # TODO test to make sure this works
+    $Session = New-PSSession -ComputerName comp_names -Credential $Cred
+    Invoke-Command -Session $Session -FilePath .\WindowsHard.ps1
+
+    # close all sessions when finished
+    Get-PSSession | Remove-PSSession
+}
+
+# inventories all the things from AD
+# used for inventory and default state
+function Discovery {
+    param (
+    
+    )
+
+    # gather a list of all the AD members in the domain
+    Get-ADGroupMember | Format-Table > ".\Desktop\users.txt"
+
+    # gather a list of all of the GPOs in the domain
+    Get-GPO -All | Format-Table > ".\Desktop\gpo.txt"
 
 }
 
+# perform a bulk password change for the network
+# generates a csv for submitting
 function BlkPasswd {
     param (
 
@@ -43,7 +73,6 @@ function Main {
 
     )
 
-
     $choice = $(Write-Host "which mode do you want?: " -ForegroundColor Magenta -NoNewline; Read-Host)
     switch ($choice) {
 
@@ -52,6 +81,10 @@ function Main {
     }
     "Harden" {
         Harden
+    }
+
+    "Discovery" {
+        Discovery
     }
 
     
