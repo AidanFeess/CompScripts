@@ -688,21 +688,6 @@ function Harden {
     Write-Host "[+] Execution policy was changed to restricted" -ForegroundColor Green
     
 
-    # disable WinRM
-    $disableWinRm = $(Write-Host "[?] Disable WinRm? (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
-    if ($disableWinRm -eq ("y")) {
-        try {
-            Disable-PSRemoting -Force -ErrorAction Continue
-            New-NetFirewallRule -DisplayName "Block WinRMHTTP" -Protocol tcp -Direction Inbound -LocalPort 5985 -Action Block
-            New-NetFirewallRule -DisplayName "Block WinRMHTTPS" -Protocol tcp -Direction Outbound -LocalPort 5986 -Action Block
-        } catch {
-            throw $_
-            Write-Host "[-] Error while trying to disable WinRM" -ForegroundColor Red
-        }
-    }
-    Write-Host "[+] WinRM disabled" -ForegroundColor Green
-
-
     # setup UAC
     SetUAC
 
@@ -808,19 +793,6 @@ function Undo {
             PrintErr(!$?, "Error in changing the execution policy to Undefined")
 
             Write-Host "[+] Changed the Powershell policy to Undefined" -ForegroundColor Green
-        }
-
-        "WinRM" {
-
-            # enable WinRM
-            $enableWinRm = $(Write-Host "[?] Enable WinRM? (y) or (n), ***WARNING*** this will make your machine vulnerable to RCE: " -ForegroundColor Magenta -NoNewline; Read-Host)
-        
-            if ($enableWinRm -eq ("y")) {
-                Enable-PSRemoting -Force -Confirm
-                PrintErr(!$?, "[-] Error in Enabling WinRM")
-                    
-                Write-Host "[+] Enabled WinRm" -ForegroundColor Green
-            }
         }
 
         "netbios" { continue }

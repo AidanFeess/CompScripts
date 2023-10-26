@@ -16,6 +16,10 @@ function Harden {
     $Session = New-PSSession -ComputerName comp_names -Credential $Cred
     Invoke-Command -Session $Session -FilePath .\WindowsHard.ps1
 
+    # Setup all the GPOs
+    # This needs to include the rule to disable WinRM
+
+
     # close all sessions when finished
     Get-PSSession | Remove-PSSession
 }
