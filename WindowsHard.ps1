@@ -49,8 +49,7 @@ function InstallTools {
         [Tools]::Autoruns = "$env:USERPROFILE\Desktop\Tools\Autoruns.zip"
     }
 
-    # should do this whole thing in parallel
-    foreach -parallel ($tool in [Tools].GetEnumValues()) {
+    foreach ($tool in [Tools].GetEnumValues()) {
         Invoke-WebRequest -Uri $urls[$tool].ToString() -OutFile "$env:USERPROFILE\Desktop\Tools\$tool.zip"
         PrintErr(!$?,"Error in downloading Tool, make sure you have internet access")
 
@@ -112,7 +111,7 @@ function Winpeas {
             }
 
             # should do this whole thing in parallel
-            foreach -parallel ($tools in [PyTools].GetEnumValues()) {
+            foreach ($tools in [PyTools].GetEnumValues()) {
                 Invoke-Webrequest $pythonList[$tools].ToString() -Outfile "$env:USERPROFILE\Desktop\Tools\$tools"
                 PrintErr(!$?, "Error while trying to download python and winpeas parsers")
                     
@@ -291,7 +290,7 @@ function WinFire {
             PercentComplete  = $x
             CurrentOperation = "port: $x"
         }
-        Write-Progress @InnerLoopProgressParameters
+        Write-Progress @FirewallProgress
     }
 
     # activate the rule from earlier
