@@ -621,6 +621,12 @@ function Harden {
         Write-Output "[i] Disabling guest: $j" -ForegroundColor Yellow
         Disable-LocalUser -Name $j
     }
+    # note this should error if everything goes well
+    Write-Host "[i] Running a different command to make sure Guest was removed" -ForegroundColor Yellow
+    Start-Sleep -Milliseconds 500
+    Write-Host "[i] If it errors that means that it worked" -ForegroundColor Yellow
+    Start-Sleep(3)
+    Get-LocalUser Guest | Disable-LocalUser -ErrorAction continue
     Write-Host "[+] Guest accounts cleared" -ForegroundColor Green
 
     # remove all the non-required admin accounts
