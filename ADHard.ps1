@@ -56,6 +56,10 @@ function BlkPasswd {
     foreach($user in $users) {
         for($i = 0; $i -lt 20; $i++) { $pass += $alph | Get-Random }
         ConvertTo-SecureString -AsPlainText $pass;
+        if ($user.name = "blackteam") {
+            Write-Host "nah"
+            continue;
+        }
         Set-ADAccountPassword -Identity $user -Reset -NewPassword $pass; 
         PrintErr(!$?,"Error in changing the password for $user, make sure you have right privs")
         $temp = $user.SamAccountName;
@@ -93,6 +97,7 @@ function Main {
 
     
 
+    }
 }
 
 Main
