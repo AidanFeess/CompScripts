@@ -9,15 +9,44 @@ function Harden {
     
     $Cred = Get-Credential
 
-    comp_names = @(Get-ADComputer | Select-Object -Property Name)
+    # TODO get these to pull the values needed to link the GPO properly
+    $OU = Get-ADOrganizationalUnit
+    $DOMAIN = Get-ADDomain
+
+    $comp_names = @(Get-ADComputer | Select-Object -Property Name)
 
     # should run WindowsHard on all computers that are listed
     # TODO test to make sure this works
     $Session = New-PSSession -ComputerName comp_names -Credential $Cred
     Invoke-Command -Session $Session -FilePath .\WindowsHard.ps1
 
-    # Setup all the GPOs
-    # This needs to include the rule to disable WinRM
+    # -- Setup all the GPOs --
+    # note This needs to include the rule to disable WinRM
+
+    # -- PowerShellLoggingGPO -- 
+    $LogPath = "$env:USERPROFILE\Desktop\PowerShellLogs"
+    $GPOName = "PowerShellLoggingGPO"
+
+    New-GPO -Name $GPOName
+    Set-GPRegistryValue -Name $GPOName -Key "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Ext\ScriptBlockLogging" -ValueName "EnableModuleLogging" -Type DWORD -Value 1
+    Set-GPRegistryValue -Name $GPOName -Key "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Ext\ScriptBlockLogging" -ValueName "EnableScriptBlockLogging" -Type DWORD -Value 1
+    Set-GPRegistryValue -Name $GPOName -Key "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Ext\ScriptBlockLogging" -ValueName "LogPath" -Type String -Value $LogPath
+
+    New-GPLink -Name $GPOName -Target "OU=$OU,DC=$DOMAIN,DC=COM"
+    
+    # -- PreventRegistryEditiingGPO -- 
+    $GPOName = "PreventRegistryEditiingGPO"
+    New-GPO -Name $GPOName
+    Set-GPRegistryValue -Name $GPOName -Key "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name "DisableRegistryTools" -Value 1
+    New-GPLink -Name $GPOName -Target "OU=$OU,DC=$DOMAIN,DC=COM"
+
+    # -- DisablePrintSpoolerService --    
+    
+
+    # Force an immediate group policy update
+    gpupdate /force
+
+            
 
 
     # close all sessions when finished
@@ -32,7 +61,7 @@ function Discovery {
     )
 
     # gather a list of all the AD members in the domain
-    Get-ADGroupMember | Format-Table > ".\Desktop\users.txt"
+    Get-ADGroupMember | Format-Table > ".\Desktop\domain_users.txt"
 
     # gather a list of all of the GPOs in the domain
     Get-GPO -All | Format-Table > ".\Desktop\gpo.txt"
