@@ -1,4 +1,5 @@
 Import-Module ActiveDirectory 
+Import-Module GroupPolicy
 
 # perform all the harding steps from the docs
 # TODO look into running hardening script on all machines in network
@@ -7,7 +8,8 @@ function Harden {
     
     )
     
-    $Cred = Get-Credential
+    # note need to make sure that you are logged on as domain admin
+    $Cred = Get-Credential -UserName $env:USERNAME
 
     # TODO get these to pull the values needed to link the GPO properly
     $OU = Get-ADOrganizationalUnit
@@ -15,9 +17,9 @@ function Harden {
 
     $comp_names = @(Get-ADComputer | Select-Object -Property Name)
 
-    # should run WindowsHard on all computers that are listed
+    # should run WindowsHard.ps1 on all computers that are listed
     # TODO test to make sure this works
-    $Session = New-PSSession -ComputerName comp_names -Credential $Cred
+    $Session = New-PSSession -ComputerName $comp_names -Credential $Cred
     Invoke-Command -Session $Session -FilePath .\WindowsHard.ps1
 
     # -- Setup all the GPOs --
@@ -44,11 +46,8 @@ function Harden {
     
 
     # Force an immediate group policy update
-    gpupdate /force
-
+    Get-ADComputer -Filter * -Searchbase "ou=$OU,DC=$DOMAIN,DC=com" | ForEach-Object{ Invoke-GPUpdate -Computer $_.name -Force -RandomDelayInMinutes 0}
             
-
-
     # close all sessions when finished
     Get-PSSession | Remove-PSSession
 }
@@ -109,6 +108,20 @@ function Main {
     param (
 
     )
+
+    # should stop underprivledged users from running the script
+    $id = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+
+    $p = New-Object System.Security.Principal.WindowsPrincipal($id)
+
+    if ($p.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) { 
+        Write-Host "Welcome to WindowsHard!" -ForegroundColor Green
+        Write-Host "Goodluck Today!!!" -ForegroundColor Green
+    }else{ 
+        Write-Host "No Red Team Allowed!!!" -ForegroundColor Red
+        Write-Host "Hope You Have a Good Day!!!" -ForegroundColor Red
+        exit
+    }
 
     $choice = $(Write-Host "which mode do you want?: " -ForegroundColor Magenta -NoNewline; Read-Host)
     switch ($choice) {
