@@ -11,7 +11,7 @@ function Harden {
     # note need to make sure that you are logged on as domain admin
     $Cred = Get-Credential -UserName $env:USERNAME
 
-    # TODO get these to pull the values needed to link the GPO properly
+    # TODO test these to pull the values needed to link the GPO properly
     $OU = Get-ADOrganizationalUnit
     $DOMAIN = Get-ADDomain
 
