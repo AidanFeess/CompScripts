@@ -216,64 +216,67 @@ function WinFire {
         # uncomment for debug
         # Write-Host "$portNum"
 
-        if ($x -eq 22) {
+        # 12/8/2023 Changing these if statements to switch statements
+        
+        switch ($x)
+        {
+            22 { # Disable SSH
 
-            $response = $(Write-Host "[?] Do you want to block ssh?: " -ForegroundColor Magenta -NoNewline; Read-Host)
-
-            if ($response -eq ("y")) {
-            
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-                Write-Host "[+] SSH(22) blocked" -ForegroundColor Green
-                continue
-
-            }else{
-
-                Write-Host "[+] SSH(22) will remain open" -ForegroundColor Green
-                continue
-
+                $response = $(Write-Host "[?] Do you want to block ssh?: " -ForegroundColor Magenta -NoNewline; Read-Host)
+    
+                if ($response -eq ("y")) {
+                
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+    
+                    Write-Host "[+] SSH(22) blocked" -ForegroundColor Green
+                    continue
+    
+                }else{
+    
+                    Write-Host "[+] SSH(22) will remain open" -ForegroundColor Green
+                    continue
+    
+                }
             }
-        }
-
-        if ($x -eq 5900) {
+            5900 { # Disable VNC
+        
+                $response = $(Write-Host "[?] Do you want to block vnc?: " -ForegroundColor Magenta -NoNewline; Read-Host)
     
-            $response = $(Write-Host "[?] Do you want to block vnc?: " -ForegroundColor Magenta -NoNewline; Read-Host)
-
-            if ($response -eq "y") {
+                if ($response -eq "y") {
+        
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
     
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-                Write-Host "[+] VNC(5900) blocked" -ForegroundColor Green
-
-                continue
-
-            }else{
-
-                Write-Host "[+] VNC(5900) will remain open" -ForegroundColor Green
-                continue
-
+                    Write-Host "[+] VNC(5900) blocked" -ForegroundColor Green
+    
+                    continue
+    
+                }else{
+    
+                    Write-Host "[+] VNC(5900) will remain open" -ForegroundColor Green
+                    continue
+    
+                }
             }
-        }
-
-        if ($x -eq 3389) {
+            3389 { # Disable RDP
+        
+                $response = $(Write-Host "[?] Do you want to block rdp?: " -ForegroundColor Magenta -NoNewline; Read-Host)
     
-            $response = $(Write-Host "[?] Do you want to block rdp?: " -ForegroundColor Magenta -NoNewline; Read-Host)
-
-            if ($response -eq "y") {
+                if ($response -eq "y") {
+        
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
     
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-                Write-Host "[+] RDP(3389) blocked" -ForegroundColor Green
-                continue
+                    Write-Host "[+] RDP(3389) blocked" -ForegroundColor Green
+                    continue
+        
+                }else{
     
-            }else{
-
-                Write-Host "[+] RDP(3389) will remain open" -ForegroundColor Green
-                continue
-
+                    Write-Host "[+] RDP(3389) will remain open" -ForegroundColor Green
+                    continue
+    
+                }
             }
         }
         
