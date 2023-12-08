@@ -308,11 +308,11 @@ function WinFire {
 # open/close the ports that are requested
 function EditFirewallRule {
     param (
-        $portNum, $action, $direction, $status, $protocol # protocol not assigned yet at 'Control', also status is string not bool
+        $portNum, $action, $direction, $status, $protocol
     )
 
     Write-Host "[+] Editing firewall rule..." -ForegroundColor Green
-    #example: Set-NetFirewallRule -DisplayName "Block 22" -Protocol tcp -Direction Inbound -LocalPort 22 -Action Block -Enabled False
+    #example: Set-NetFirewallRule -DisplayName "Block 22" -Protocol tcp -Direction in -LocalPort 22 -Action Block -Enabled False
     Set-NetFirewallRule -DisplayName "$action $portNum" -Protocol $protcol -Direction $direction -LocalPort $portNum -Action $action -Enabled $status 
     PrintErr(!$?, "Error in editing firewall rule")
 
@@ -880,10 +880,12 @@ function Main {
                     [Int]$portNum = $(Write-Host "[?] Which port (number): " -ForegroundColor Magenta -NoNewline; Read-Host)
                     [String]$action = $(Write-Host "[?] (Allow) or (Block): " -ForegroundColor Magenta -NoNewline; Read-Host)
                     [String]$direction = $(Write-Host "[?] Which direction (in) or (out): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [String]$status = $(Write-Host "[?] To create the rule use (True) or (False): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$status = $(Write-Host "[?] Enabled (True) or (False): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$protocol = "TCP" #$(Write-Host "[?] Which protocol (TCP) or (UDP): " - ForegroundColor Magenta -NoNewline; Read-Host)
+                    # not sure if we wanted to prompt user for protocol? comment is there though
 
                     
-                    EditFirewallRule $portNum $action $direction $status
+                    EditFirewallRule $portNum $action $direction $status $protocol
                 }
 
                 "chpwd" {
