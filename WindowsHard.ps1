@@ -308,12 +308,12 @@ function WinFire {
 # open/close the ports that are requested
 function EditFirewallRule {
     param (
-        $portNum, $action, $direction, $protocol, $status
+        $portNum, $action, $direction, $status, $protocol # protocol not assigned yet at 'Control', also status is string not bool
     )
 
     Write-Host "[+] Editing firewall rule..." -ForegroundColor Green
-    
-    Set-NetFirewallRule -DisplayName "$action $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status 
+    #example: Set-NetFirewallRule -DisplayName "Block 22" -Protocol tcp -Direction Inbound -LocalPort 22 -Action Block -Enabled False
+    Set-NetFirewallRule -DisplayName "$action $portNum" -Protocol $protcol -Direction $direction -LocalPort $portNum -Action $action -Enabled $status 
     PrintErr(!$?, "Error in editing firewall rule")
 
     Write-Host "[+] Changed firewall rule for $port" -ForegroundColor Green
@@ -873,16 +873,17 @@ function Main {
             - quit
             " 
             
-            $choice = $(Write-Host "which mode do you want?: " -ForegroundColor Magenta -NoNewline; Read-Host)
+            $choice = $(Write-Host "Which mode do you want?: " -ForegroundColor Magenta -NoNewline; Read-Host)
             switch ($choice) {
 
                 "efwrule" {
-                    [Int]$portNum = $(Write-Host "[?] Which port (num): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [String]$action = $(Write-Host "[?] (allow) or (block): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [String]$direction = $(Write-Host "[?] Which direction (in) or (out): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [Bool]$status = $(Write-Host "[?] To create the rule use true or false: " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [Int]$portNum = $(Write-Host "[?] Which port (number): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$action = $(Write-Host "[?] (Allow) or (Block): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$direction = $(Write-Host "[?] Which direction (Inwards) or (Outwards): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$status = $(Write-Host "[?] To create the rule use (True) or (False): " -ForegroundColor Magenta -NoNewline; Read-Host)
+
                     
-                    EditFirewallRule ($portNum, $action, $direction, $status)
+                    EditFirewallRule $portNum $action $direction $status
                 }
 
                 "chpwd" {
