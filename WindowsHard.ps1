@@ -879,7 +879,7 @@ function Main {
                 "efwrule" {
                     [Int]$portNum = $(Write-Host "[?] Which port (number): " -ForegroundColor Magenta -NoNewline; Read-Host)
                     [String]$action = $(Write-Host "[?] (Allow) or (Block): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [String]$direction = $(Write-Host "[?] Which direction (Inwards) or (Outwards): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$direction = $(Write-Host "[?] Which direction (in) or (out): " -ForegroundColor Magenta -NoNewline; Read-Host)
                     [String]$status = $(Write-Host "[?] To create the rule use (True) or (False): " -ForegroundColor Magenta -NoNewline; Read-Host)
 
                     
