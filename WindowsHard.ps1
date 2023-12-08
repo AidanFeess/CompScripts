@@ -633,7 +633,7 @@ function Harden {
     Write-Host "[+] Guest accounts cleared" -ForegroundColor Green
 
     # remove all the non-required admin accounts
-    Write-Host "[+] Removing all admin accounts...execpt yours" -ForegroundColor Green
+    Write-Host "[+] Removing all admin accounts...except yours" -ForegroundColor Green
 
     # read the groups and select the correct admin group
     $a = Get-LocalGroup | Select-Object -Property "Name" | Select-String -Pattern "admin"
