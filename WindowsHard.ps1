@@ -774,7 +774,7 @@ function Undo {
         - (SMB) re-enable SMBv1
         "
 
-        [Int]$step = $(Write-Host "[?] What step do you want to undo: " -ForegroundColor Magenta -NoNewline; Read-Host)
+        [string]$step = $(Write-Host "[?] What step do you want to undo: " -ForegroundColor Magenta -NoNewline; Read-Host)
 
         switch ($step) {
 
