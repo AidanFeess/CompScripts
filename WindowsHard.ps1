@@ -665,6 +665,20 @@ function Harden {
     }
     Write-Host "[+] Pruned Administrator accounts" -ForegroundColor Green
 
+    # Check the status of the print spooler service
+    # Disable Print-Spooler
+    # note to renable run the opposite commands
+    # Start-Service -name "Spooler" -force
+    # Set-Service -name "Spooler" -startupType "Manual"
+    $service = Get-Service -Name "Spooler"
+    if ($service.Status -eq "Running") {
+        [String]$answer = $(Write-Host "[?] Would you like to disable the printers (y/n): " -ForegroundColor Magenta -NoNewline; Read-Host)
+
+        if($answer -eq "y") {
+            Stop-Service -name "Spooler" -force
+            Set-Service -name "Spooler" -startupType "Disabled"
+        }
+    }
 
     # harden the firewall for remote or lan comps
     $winFirewallOn = $(Write-Host "[?] Do you want to turn on the windows firewall (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
