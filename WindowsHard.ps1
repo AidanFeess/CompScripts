@@ -1,7 +1,6 @@
 Import-Module Defender
 Import-Module NetSecurity
 Import-Module NetTCPIP
-Import-Module GroupPolicy
 Import-Module ScheduledTasks
 
 enum Tools{  
@@ -308,15 +307,15 @@ function WinFire {
 # open/close the ports that are requested
 function EditFirewallRule {
     param (
-        $portNum, $action, $direction, $status, $protocol
+        $portNum, $action, $direction, $status, $protocol # protocol not assigned yet at 'Control', also status is string not bool
     )
 
     Write-Host "[+] Editing firewall rule..." -ForegroundColor Green
-    #example: Set-NetFirewallRule -DisplayName "Block 22" -Protocol tcp -Direction in -LocalPort 22 -Action Block -Enabled False
-    Set-NetFirewallRule -DisplayName "$action $portNum" -Protocol $protcol -Direction $direction -LocalPort $portNum -Action $action -Enabled $status 
+    #example: Set-NetFirewallRule -DisplayName "Block 22" -Protocol tcp -Direction Inbound -LocalPort 22 -Action Block -Enabled False
+    Set-NetFirewallRule -DisplayName "$action $portNum" -Protocol $protocol -Direction $direction -LocalPort $portNum -Action $action -Enabled $status 
     PrintErr(!$?, "Error in editing firewall rule")
 
-    Write-Host "[+] Changed firewall rule for $port" -ForegroundColor Green
+    Write-Host "[+] Changed firewall rule for port $portNum" -ForegroundColor Green
 }
 
 # change the password on admin account
@@ -596,9 +595,8 @@ function Harden {
     
     # check if the Tools folder is already created
     Write-Host "[+] Checking to see if the tools are installed..." -ForegroundColor Green
-    if (Test-Path -Path "$env:USERPROFILE\Desktop\Tools") {
-        continue
-    } else {
+    $tp = Test-Path -Path "$env:USERPROFILE\Desktop\Tools" 
+    if (!$tp) {
         InstallTools
     }
 
@@ -622,7 +620,7 @@ function Harden {
     $user = Get-LocalGroupMember -Name "Guests" 
     foreach ($j in $user) { 
         Write-Output "[i] Disabling guest: $j" -ForegroundColor Yellow
-        Disable-LocalUser -Name $j
+        Disable-LocalUser -Name ([string]$j).Split('\')[1] # grabbing the actual user name
     }
     # note this should error if everything goes well
     Write-Host "[i] Running a different command to make sure Guest was removed" -ForegroundColor Yellow
@@ -880,11 +878,9 @@ function Main {
                     [Int]$portNum = $(Write-Host "[?] Which port (number): " -ForegroundColor Magenta -NoNewline; Read-Host)
                     [String]$action = $(Write-Host "[?] (Allow) or (Block): " -ForegroundColor Magenta -NoNewline; Read-Host)
                     [String]$direction = $(Write-Host "[?] Which direction (in) or (out): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [String]$status = $(Write-Host "[?] Enabled (True) or (False): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [String]$protocol = "TCP" #$(Write-Host "[?] Which protocol (TCP) or (UDP): " - ForegroundColor Magenta -NoNewline; Read-Host)
-                    # not sure if we wanted to prompt user for protocol? comment is there though
+                    [String]$status = $(Write-Host "[?] To create the rule use (True) or (False): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$protocol = $(Write-Host "[?] What protocol (TCP) or (UDP): " -ForegroundColor Magenta -NoNewline; Read-Host)
 
-                    
                     EditFirewallRule $portNum $action $direction $status $protocol
                 }
 
