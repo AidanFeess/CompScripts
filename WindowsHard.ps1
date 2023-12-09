@@ -207,6 +207,8 @@ function WinFire {
     Write-Host "[i] You are possibly going to be asked if you want to block certain ports" -ForegroundColor Yellow
     Write-Host "[i] Your options are ( y ) or ( n )" -ForegroundColor Yellow
 
+    Start-Sleep -Milliseconds 500
+
     # parse the list to block common remote access ports
     for ($x = 0; $x -lt ($allports.Length - 1); $x++) {
 
@@ -217,16 +219,17 @@ function WinFire {
 
         # 12/8/2023 Changing these if statements to switch statements
         
-        switch ($x)
+        switch ($portNum)
         {
             22 { # Disable SSH
 
+                Write-Host $x
                 $response = $(Write-Host "[?] Do you want to block ssh?: " -ForegroundColor Magenta -NoNewline; Read-Host)
     
                 if ($response -eq ("y")) {
                 
-                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
     
                     Write-Host "[+] SSH(22) blocked" -ForegroundColor Green
                     continue
@@ -244,8 +247,8 @@ function WinFire {
     
                 if ($response -eq "y") {
         
-                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
     
                     Write-Host "[+] VNC(5900) blocked" -ForegroundColor Green
     
@@ -264,8 +267,8 @@ function WinFire {
     
                 if ($response -eq "y") {
         
-                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
     
                     Write-Host "[+] RDP(3389) blocked" -ForegroundColor Green
                     continue
@@ -279,18 +282,18 @@ function WinFire {
             }
         }
         
-        # allow the port is it is currently being used
+        # allow the port if it is currently being used
         if ($allports[$x].LocalPort -in $listening) {
-            New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Allow
+            New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Allow
         } else {
-            New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+            New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
         }
 
         $FirewallProgress= @{
-            Activity         = 'Configuring Firewall'
-            Status           = 'Progress'
-            PercentComplete  = $x
-            CurrentOperation = "port: $x"
+            Activity         = 'Configuring Firewall rules'
+            Status           = 'Configuring'
+            PercentComplete  = ($x / ($allports.Length-2)) * 100
+            CurrentOperation = "port: number $x"
         }
         Write-Progress @FirewallProgress
     }
