@@ -619,7 +619,7 @@ function Harden {
     # note this should not need undo because no guests accounts should be allowed
     $user = Get-LocalGroupMember -Name "Guests" 
     foreach ($j in $user) { 
-        Write-Output "[i] Disabling guest: $j" -ForegroundColor Yellow
+        Write-Host "[i] Disabling guest: $j" -ForegroundColor Yellow
         Disable-LocalUser -Name ([string]$j).Split('\')[1] # grabbing the actual user name
     }
     # note this should error if everything goes well
@@ -636,7 +636,7 @@ function Harden {
     # read the groups and select the correct admin group
     $a = Get-LocalGroup | Select-Object -Property "Name" | Select-String -Pattern "admin"
     Write-Host "$a"
-    [Int]$c = $(Write-Host "[?] Which one is the real admin group: " -ForegroundColor Magenta -NoNewline; Read-Host)
+    [Int]$c = $(Write-Host "[?] Enter index of real admin group: " -ForegroundColor Magenta -NoNewline; Read-Host)
     foreach ($i in $a) {
         if ($i -eq $a[$c]) {
             [String]$adminGroup = $i
@@ -644,6 +644,7 @@ function Harden {
     }
 
     # grabs the group name from the object
+    # this outputs True and I dont know how to stop it but we also cant touch this line.
     $adminGroup -match '(?<==)[\w]+'
 
     # note this should not need undo because it only removes the account from the Administrators group
@@ -651,8 +652,11 @@ function Harden {
     $user = Get-LocalGroupMember -Name $Matches[0]
     foreach ($x in $user) {
         $st =[string]$x.Name
+        if ($st -eq $env:computername+'\Administrator'){
+            continue
+        }
         if ( -Not $st.Contains($env:USERNAME)) {
-            Write-Host "[i] Disabling admin: $st" -ForegroundColor Yellow
+            Write-Host "[i] Removing other admins: $st" -ForegroundColor Yellow
             Remove-LocalGroupMember -Group $Matches[0] $st
         }
     }
@@ -827,25 +831,25 @@ function Main {
         Write-Host "Welcome to WindowsHard!" -ForegroundColor Green
         Write-Host "Goodluck Today!!!" -ForegroundColor Green
     }else{ 
-        Write-Host "No Red Team Allowed!!!" -ForegroundColor Red
+        Write-Host "No Red Team Allowed >:P!!!" -ForegroundColor Red
         Write-Host "Hope You Have a Good Day!!!" -ForegroundColor Red
         exit
     }
 
-
+    # introduction
     Write-Host "[i] Choose a mode to run the script" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
     Write-Host "[i] Harden will start the hardening process on the current machine" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
     Write-Host "[i] Control will allow the user to make changes to windows without having to navigate around" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] If any errors occur, a message will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "red" -ForegroundColor Red
+    Write-Host "[i] If any errors occur, a message will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[red]" -ForegroundColor Red
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] If any progress is made, a message will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "green" -ForegroundColor Green
+    Write-Host "[i] If any progress is made, a message will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[green]" -ForegroundColor Green
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] Any side note info will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "yellow" -ForegroundColor Yellow
+    Write-Host "[i] Any side note info will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[yellow]" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] All questions to the user will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "magenta" -ForegroundColor Magenta
+    Write-Host "[i] All questions to the user will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[magenta]" -ForegroundColor Magenta
 
     $usermode = $(Write-Host "[?] Harden(h) or Control(c): " -ForegroundColor Magenta -NoNewline; Read-Host)
     if ($usermode -eq ("h")) {
