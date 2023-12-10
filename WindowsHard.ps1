@@ -146,7 +146,7 @@ function WinUP {
         
     )
 
-    # TODO check and see if this actually works/if we want it
+    # TODO this doesn't work at the moment, upstream issue
     Write-Host "[+] Setting up Windows Update..." -ForegroundColor Yellow
     
     # we will have to install this / need to make sure we can
@@ -385,60 +385,6 @@ function  RemoveTools {
     Write-Host "[+] Deleted the tools directory" -ForegroundColor Green
 }
 
-function Discovery {
-    param (
-        $mode
-    )
-
-    $discoverypath = "$env:USERPROFILE\Desktop\Discovery"
-
-    # note in this case removing the dump is = "undoing it"
-    if ($mode -eq "undo") {
-        Remove-Item -LiteralPath "$discoverypath" -Force -Recurse 
-    }
-
-    if ($mode -eq "y") { 
-
-        Write-Host "[+] Running discovery dump..." -ForegroundColor Green
-        Write-Host "[i] YOU SHOULD STILL BE USING THE OTHER TOOLS THAT WERE INSTALLED" -ForegroundColor Yellow
-        if (Test-Path -Path "$env:USERPROFILE\Desktop\Discovery") {
-            continue
-        }else{
-            New-Item -Path "$env:USERPROFILE\Desktop" -Name Discovery -type Directory
-        }
-
-        # -- prints the results of data dumps into a nicely formatted table for saving --
-
-        Write-Host "[+] Gathering services..." -ForegroundColor Yellow
-        Get-Service -Verbose | Format-Table -AutoSize > "$discoverypath\services.txt"
-
-        # gather the running process on a system with the username tagged to it
-        Write-Host "[+] Gathering running processes..." -ForegroundColor Green
-        $owners = @{}
-        Get-WmiObject win32_process | Foreach-Object {$owners[$_.handle] = $_.getowner().user} -ErrorAction SilentlyContinue
-        Get-Process | Select-Object processname,Id,@{l="Owner";e={$owners[$_.id.tostring()]}} -ErrorAction SilentlyContinue | Format-Table -AutoSize > "$discoverypath\processes.txt"
-
-        Write-Host "[+] Gathering tcp connections..." -ForegroundColor Green
-        Get-NetTCPConnection -Verbose | Format-Table -AutoSize > "$discoverypath\connections.txt"
-
-        Write-Host "[+] Gathering any scheduled tasks..." -ForegroundColor Green
-        Get-ScheduledTask -Verbose | Format-Table -AutoSize > "$discoverypath\scheduledtasks.txt"
-
-        Write-Host "[+] Gathering any startup apps..." -ForegroundColor Green
-        Get-CimInstance Win32_StartupCommand |
-        Select-Object Name, command, Location, User |
-        Format-Table -AutoSize > "$discoverypath\startupapps.txt"
-
-        Write-Host "[+] Gathering list of users for diff..." -ForegroundColor Green
-        Get-ADGroupMember | Format-Table -AutoSize > "$discoverypath\lsadusrs.txt"
-        Get-LocalUser | Format-Table -AutoSize > "$discoverypath\lslusrs.txt"
-
-        Write-Host "[+] Data dumped to 'Discovery' folder on your desktop" -ForegroundColor Green
-    
-        Write-Host "[i] You should still be using other tools because this won't catch everything" -ForegroundColor Yellow
-    }
-}
-
 function SetUAC {
     param (
         
@@ -668,16 +614,6 @@ function Harden {
         WinFire
     }
 
-
-    $hardenExch = $(Write-Host "[?] Do you want to Harden Exchange (y): " -ForegroundColor Magenta -NoNewline; Read-Host)
-    if ($hardenExch -eq ("y")) {
-        # checking for services of exchange Exchange seems to work the best
-        if (Get-Service | Select-Object -Property "Name" | Select-String -Pattern "Exchange") {
-            ExchangeHard($mode)
-        }
-    }
-
-
     # turn on Windows Defender
     # note Windows 8.1 (server 2016+) should already be on
     EnableDefenderOn($mode, $step)
@@ -729,9 +665,6 @@ function Harden {
         PrintErr(!$?, "Error while trying to disable access to regedit")
     }
     Write-Host "[+] Registry editing via tools disabled" -ForegroundColor Green
-
-    # TODO enable/install wdac/applocker/or DeepBlue CLi?
-
 
     # disable netbios ??????(might be too good)
     $adapters=(Get-WmiObject win32_networkadapterconfiguration)
@@ -866,7 +799,6 @@ function Main {
             - (strtls) Start Tools
             - (rmtls) Remove Tools
             - (wp) Install & Run winpeas
-            - (disc) Discovery
             - (scan) DefenderScan
             - (Undo) Undo
             - (OSK) OSK Spawn
@@ -900,11 +832,6 @@ function Main {
 
                 "wp" {Winpeas}
                 
-                "disc" {
-                    $discoveryMode = $(Write-Host "[?] Do you want to perform a dump (y) or (undo), ***WARNING*** (undo) will remove the dump: " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    Discovery($discoveryMode)
-                }
-                
                 "scan" {DefenderScan}
 
                 "Undo" {
@@ -926,17 +853,8 @@ function Main {
 
                     # download the version of dotnet required to run wonk
                     # note installing the sdk also installs the runtime
-                    # Write-Host "[+] Installing the verion of .net sdk that is required..." -ForegroundColor Green
-
-                    # Invoke-WebRequest "https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-7.0.202-windows-x64-installer" -OutFile "$env:Userprofile\Desktop\Tools\dotnet7.exe"
-                    # PrintErr(!$?,"Error in downloading dotnet installer, make sure you have internet access")
-
-                    # Invoke-Expression "$env:USERPROFILE\Desktop\Tools\dotnet7.exe"
-                    # PrintErr(!$?,"Error in running dotnet installer, make sure you have right privs")
-
-                    # Write-Host "[+] .net sdk installed" -ForegroundColor Green
                     
-                    # need to refresh the path again to use the cli
+                    # need to refresh the path again to use the cli since install
                     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
                     
                     Write-Host "[+] Download Wonk..." -ForegroundColor Green
@@ -960,7 +878,7 @@ function Main {
                     # TODO test and make sure this starts as intended
                     # Start-Process .\bin\release\net7.0\wonk.exe
 
-                    # create a class for Wonk
+                    # create a service for Wonk
                     $params = @{
                         Name = "Wonk"
                         BinaryPathName = "$env:USERPROFILE\Desktop\Wonk\.bin\release\net7.0\wonk.exe"
