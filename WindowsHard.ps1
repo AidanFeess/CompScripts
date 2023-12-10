@@ -1,7 +1,6 @@
 Import-Module Defender
 Import-Module NetSecurity
 Import-Module NetTCPIP
-Import-Module GroupPolicy
 Import-Module ScheduledTasks
 
 enum Tools{  
@@ -208,6 +207,8 @@ function WinFire {
     Write-Host "[i] You are possibly going to be asked if you want to block certain ports" -ForegroundColor Yellow
     Write-Host "[i] Your options are ( y ) or ( n )" -ForegroundColor Yellow
 
+    Start-Sleep -Milliseconds 500
+
     # parse the list to block common remote access ports
     for ($x = 0; $x -lt ($allports.Length - 1); $x++) {
 
@@ -216,79 +217,83 @@ function WinFire {
         # uncomment for debug
         # Write-Host "$portNum"
 
-        if ($x -eq 22) {
+        # 12/8/2023 Changing these if statements to switch statements
+        
+        switch ($portNum)
+        {
+            22 { # Disable SSH
 
-            $response = $(Write-Host "[?] Do you want to block ssh?: " -ForegroundColor Magenta -NoNewline; Read-Host)
-
-            if ($response -eq ("y")) {
-            
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-                Write-Host "[+] SSH(22) blocked" -ForegroundColor Green
-                continue
-
-            }else{
-
-                Write-Host "[+] SSH(22) will remain open" -ForegroundColor Green
-                continue
-
+                Write-Host $x
+                $response = $(Write-Host "[?] Do you want to block ssh?: " -ForegroundColor Magenta -NoNewline; Read-Host)
+    
+                if ($response -eq ("y")) {
+                
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
+    
+                    Write-Host "[+] SSH(22) blocked" -ForegroundColor Green
+                    continue
+    
+                }else{
+    
+                    Write-Host "[+] SSH(22) will remain open" -ForegroundColor Green
+                    continue
+    
+                }
             }
-        }
-
-        if ($x -eq 5900) {
+            5900 { # Disable VNC
+        
+                $response = $(Write-Host "[?] Do you want to block vnc?: " -ForegroundColor Magenta -NoNewline; Read-Host)
     
-            $response = $(Write-Host "[?] Do you want to block vnc?: " -ForegroundColor Magenta -NoNewline; Read-Host)
-
-            if ($response -eq "y") {
+                if ($response -eq "y") {
+        
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
     
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-                Write-Host "[+] VNC(5900) blocked" -ForegroundColor Green
-
-                continue
-
-            }else{
-
-                Write-Host "[+] VNC(5900) will remain open" -ForegroundColor Green
-                continue
-
+                    Write-Host "[+] VNC(5900) blocked" -ForegroundColor Green
+    
+                    continue
+    
+                }else{
+    
+                    Write-Host "[+] VNC(5900) will remain open" -ForegroundColor Green
+                    continue
+    
+                }
             }
-        }
-
-        if ($x -eq 3389) {
+            3389 { # Disable RDP
+        
+                $response = $(Write-Host "[?] Do you want to block rdp?: " -ForegroundColor Magenta -NoNewline; Read-Host)
     
-            $response = $(Write-Host "[?] Do you want to block rdp?: " -ForegroundColor Magenta -NoNewline; Read-Host)
-
-            if ($response -eq "y") {
+                if ($response -eq "y") {
+        
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Block
+                    New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
     
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
-                New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Outbound -LocalPort $portNum -Action Block
-
-                Write-Host "[+] RDP(3389) blocked" -ForegroundColor Green
-                continue
+                    Write-Host "[+] RDP(3389) blocked" -ForegroundColor Green
+                    continue
+        
+                }else{
     
-            }else{
-
-                Write-Host "[+] RDP(3389) will remain open" -ForegroundColor Green
-                continue
-
+                    Write-Host "[+] RDP(3389) will remain open" -ForegroundColor Green
+                    continue
+    
+                }
             }
         }
         
-        # allow the port is it is currently being used
+        # allow the port if it is currently being used
         if ($allports[$x].LocalPort -in $listening) {
-            New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Allow
+            New-NetFirewallRule -DisplayName "Allow $portNum" -Protocol tcp -Direction in -LocalPort $portNum -Action Allow
         } else {
-            New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction Inbound -LocalPort $portNum -Action Block
+            New-NetFirewallRule -DisplayName "Block $portNum" -Protocol tcp -Direction out -LocalPort $portNum -Action Block
         }
 
         $FirewallProgress= @{
-            Activity         = 'Configuring Firewall'
-            Status           = 'Progress'
-            PercentComplete  = $x
-            CurrentOperation = "port: $x"
+            Activity         = 'Configuring Firewall rules'
+            Status           = 'Configuring'
+            PercentComplete  = ($x / ($allports.Length-2)) * 100
+            CurrentOperation = "port: number $x"
         }
         Write-Progress @FirewallProgress
     }
@@ -305,15 +310,15 @@ function WinFire {
 # open/close the ports that are requested
 function EditFirewallRule {
     param (
-        $portNum, $action, $direction, $protocol, $status
+        $portNum, $action, $direction, $status, $protocol # protocol not assigned yet at 'Control', also status is string not bool
     )
 
     Write-Host "[+] Editing firewall rule..." -ForegroundColor Green
-    
-    Set-NetFirewallRule -DisplayName "$action $portNum" -Direction $direction -LocalPort $portNum  -Protocol $protocol -Action $action -Enabled $status 
+    #example: Set-NetFirewallRule -DisplayName "Block 22" -Protocol tcp -Direction Inbound -LocalPort 22 -Action Block -Enabled False
+    Set-NetFirewallRule -DisplayName "$action $portNum" -Protocol $protocol -Direction $direction -LocalPort $portNum -Action $action -Enabled $status 
     PrintErr(!$?, "Error in editing firewall rule")
 
-    Write-Host "[+] Changed firewall rule for $port" -ForegroundColor Green
+    Write-Host "[+] Changed firewall rule for port $portNum" -ForegroundColor Green
 }
 
 # change the password on admin account
@@ -593,9 +598,8 @@ function Harden {
     
     # check if the Tools folder is already created
     Write-Host "[+] Checking to see if the tools are installed..." -ForegroundColor Green
-    if (Test-Path -Path "$env:USERPROFILE\Desktop\Tools") {
-        continue
-    } else {
+    $tp = Test-Path -Path "$env:USERPROFILE\Desktop\Tools" 
+    if (!$tp) {
         InstallTools
     }
 
@@ -618,8 +622,8 @@ function Harden {
     # note this should not need undo because no guests accounts should be allowed
     $user = Get-LocalGroupMember -Name "Guests" 
     foreach ($j in $user) { 
-        Write-Output "[i] Disabling guest: $j" -ForegroundColor Yellow
-        Disable-LocalUser -Name $j
+        Write-Host "[i] Disabling guest: $j" -ForegroundColor Yellow
+        Disable-LocalUser -Name ([string]$j).Split('\')[1] # grabbing the actual user name
     }
     # note this should error if everything goes well
     Write-Host "[i] Running a different command to make sure Guest was removed" -ForegroundColor Yellow
@@ -630,12 +634,12 @@ function Harden {
     Write-Host "[+] Guest accounts cleared" -ForegroundColor Green
 
     # remove all the non-required admin accounts
-    Write-Host "[+] Removing all admin accounts...execpt yours" -ForegroundColor Green
+    Write-Host "[+] Removing all admin accounts...except yours" -ForegroundColor Green
 
     # read the groups and select the correct admin group
     $a = Get-LocalGroup | Select-Object -Property "Name" | Select-String -Pattern "admin"
     Write-Host "$a"
-    [Int]$c = $(Write-Host "[?] Which one is the real admin group: " -ForegroundColor Magenta -NoNewline; Read-Host)
+    [Int]$c = $(Write-Host "[?] Enter index of real admin group: " -ForegroundColor Magenta -NoNewline; Read-Host)
     foreach ($i in $a) {
         if ($i -eq $a[$c]) {
             [String]$adminGroup = $i
@@ -643,6 +647,7 @@ function Harden {
     }
 
     # grabs the group name from the object
+    # this outputs True and I dont know how to stop it but we also cant touch this line.
     $adminGroup -match '(?<==)[\w]+'
 
     # note this should not need undo because it only removes the account from the Administrators group
@@ -650,8 +655,11 @@ function Harden {
     $user = Get-LocalGroupMember -Name $Matches[0]
     foreach ($x in $user) {
         $st =[string]$x.Name
+        if ($st -eq $env:computername+'\Administrator'){
+            continue
+        }
         if ( -Not $st.Contains($env:USERNAME)) {
-            Write-Host "[i] Disabling admin: $st" -ForegroundColor Yellow
+            Write-Host "[i] Removing other admins: $st" -ForegroundColor Yellow
             Remove-LocalGroupMember -Group $Matches[0] $st
         }
     }
@@ -785,7 +793,7 @@ function Undo {
         - (SMB) re-enable SMBv1
         "
 
-        [Int]$step = $(Write-Host "[?] What step do you want to undo: " -ForegroundColor Magenta -NoNewline; Read-Host)
+        [string]$step = $(Write-Host "[?] What step do you want to undo: " -ForegroundColor Magenta -NoNewline; Read-Host)
 
         switch ($step) {
 
@@ -840,25 +848,25 @@ function Main {
         Write-Host "Welcome to WindowsHard!" -ForegroundColor Green
         Write-Host "Goodluck Today!!!" -ForegroundColor Green
     }else{ 
-        Write-Host "No Red Team Allowed!!!" -ForegroundColor Red
+        Write-Host "No Red Team Allowed >:P!!!" -ForegroundColor Red
         Write-Host "Hope You Have a Good Day!!!" -ForegroundColor Red
         exit
     }
 
-
+    # introduction
     Write-Host "[i] Choose a mode to run the script" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
     Write-Host "[i] Harden will start the hardening process on the current machine" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
     Write-Host "[i] Control will allow the user to make changes to windows without having to navigate around" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] If any errors occur, a message will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "red" -ForegroundColor Red
+    Write-Host "[i] If any errors occur, a message will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[red]" -ForegroundColor Red
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] If any progress is made, a message will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "green" -ForegroundColor Green
+    Write-Host "[i] If any progress is made, a message will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[green]" -ForegroundColor Green
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] Any side note info will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "yellow" -ForegroundColor Yellow
+    Write-Host "[i] Any side note info will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[yellow]" -ForegroundColor Yellow
     Start-Sleep -Milliseconds 500
-    Write-Host "[i] All questions to the user will be printed to the console in " ForegroundColor Yellow -NoNewline; Write-Host "magenta" -ForegroundColor Magenta
+    Write-Host "[i] All questions to the user will be printed to the console in " -ForegroundColor Yellow -NoNewline; Write-Host "[magenta]" -ForegroundColor Magenta
 
     $usermode = $(Write-Host "[?] Harden(h) or Control(c): " -ForegroundColor Magenta -NoNewline; Read-Host)
     if ($usermode -eq ("h")) {
@@ -884,16 +892,17 @@ function Main {
             - quit
             " 
             
-            $choice = $(Write-Host "which mode do you want?: " -ForegroundColor Magenta -NoNewline; Read-Host)
+            $choice = $(Write-Host "Which mode do you want?: " -ForegroundColor Magenta -NoNewline; Read-Host)
             switch ($choice) {
 
                 "efwrule" {
-                    [Int]$portNum = $(Write-Host "[?] Which port (num): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [String]$action = $(Write-Host "[?] (allow) or (block): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [Int]$portNum = $(Write-Host "[?] Which port (number): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$action = $(Write-Host "[?] (Allow) or (Block): " -ForegroundColor Magenta -NoNewline; Read-Host)
                     [String]$direction = $(Write-Host "[?] Which direction (in) or (out): " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    [Bool]$status = $(Write-Host "[?] To create the rule use true or false: " -ForegroundColor Magenta -NoNewline; Read-Host)
-                    
-                    EditFirewallRule ($portNum, $action, $direction, $status)
+                    [String]$status = $(Write-Host "[?] To create the rule use (True) or (False): " -ForegroundColor Magenta -NoNewline; Read-Host)
+                    [String]$protocol = $(Write-Host "[?] What protocol (TCP) or (UDP): " -ForegroundColor Magenta -NoNewline; Read-Host)
+
+                    EditFirewallRule $portNum $action $direction $status $protocol
                 }
 
                 "chpwd" {
