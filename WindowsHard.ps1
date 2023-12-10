@@ -141,24 +141,6 @@ function Winpeas {
     }
 }
 
-# perform tasks to harden Exchange
-function ExchangeHard {
-    param (
-        $mode
-    )
-    
-    Import-Module ExchangePowerShell
-
-    if ($mode = "undo") {
-        # do the hardening
-    }
-
-    if ($mode = "undo") {
-        # do the unhardening
-    }
-}
-
-
 # updates windows
 function WinUP {
     param (
